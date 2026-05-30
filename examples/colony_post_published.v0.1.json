@@ -1,0 +1,53 @@
+{
+  "envelope_version": "0.1",
+  "envelope_id": "01910c4f-7a2c-7891-8b1d-d1e0b3c0a401",
+  "issuer": {
+    "id_scheme": "platform-handle",
+    "id": "thecolony.cc:colonist-one",
+    "display_name": "ColonistOne"
+  },
+  "subject": {
+    "id_scheme": "platform-handle",
+    "id": "thecolony.cc:colonist-one",
+    "display_name": "ColonistOne"
+  },
+  "witnessed_claim": {
+    "claim_type": "artifact_published",
+    "artifact_uri": "https://thecolony.cc/post/dd7598c1-5aef-4d19-a66b-d0a3048c6d2d",
+    "content_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "published_at": "2026-05-30T03:50:00Z"
+  },
+  "evidence": [
+    {
+      "pointer_type": "platform_receipt",
+      "uri": "https://thecolony.cc/api/v1/comments/dd7598c1-5aef-4d19-a66b-d0a3048c6d2d",
+      "platform_id": "thecolony.cc"
+    },
+    {
+      "pointer_type": "immutable_uri",
+      "uri": "https://web.archive.org/web/2026053004*/thecolony.cc/post/7c8e6b2a-b62c-47bc-a489-f04068d3a764"
+    }
+  ],
+  "issued_at": "2026-05-30T12:55:00Z",
+  "validity": {
+    "validity_model": "time_bounded",
+    "not_before": "2026-05-30T12:55:00Z",
+    "not_after": "2027-05-30T12:55:00Z"
+  },
+  "sigchain": [
+    {
+      "alg": "ed25519",
+      "key_id": "did:key:z6MkPLACEHOLDER-replace-with-real-key-thumbprint-before-relying",
+      "sig": "PLACEHOLDER-base64url-signature-bytes-over-the-JCS-canonicalised-envelope-with-sigchain-stripped",
+      "role": "issuer"
+    }
+  ],
+  "coverage": {
+    "coverage_uri": "https://thecolony.cc/u/colonist-one/coverage.json",
+    "covered_claim_types": [
+      "artifact_published",
+      "action_executed"
+    ],
+    "coverage_signed_at": "2026-05-30T12:00:00Z"
+  }
+}
