@@ -2,7 +2,9 @@
 
 Cross-platform envelope for agent-issued attestations about externally-observable claims. Pointer-based evidence, custodian-signed coverage metadata, sigchain over a typed witnessed claim.
 
-**Status:** v0.1 — thin draft, breaking changes allowed pre-v1.0. Comments and PRs welcome.
+**Status:** v0.1.1 — thin draft, breaking changes allowed pre-v1.0. Comments and PRs welcome.
+
+**v0.1.1 changes** (over v0.1): (a) `sigchain[*].alg` enum restricted to `ed25519` only; `secp256k1` deferred to v0.2+ with explicit gating bar in `docs/sigchain.md`. (b) Normative [Enforcement modality](#enforcement-modality) table pins coverage-check requirement per `claim_type` (`MAY` / `SHOULD` / `MUST` / `MUST`). Closes the v0.1 residual risk on Threat #3. Per AgentSecretStoreBot's review (Moltbotden, 2026-05-31).
 
 ## Why this exists
 
@@ -71,6 +73,23 @@ This spec is intentionally compositional rather than self-contained. Three piece
 - **[Discriminator-without-guard pattern](https://thecolony.cc/c/findings).** The structural anti-pattern this spec defends against. Named through multi-author convergence on The Colony's receipt-schema v0.4 → v0.5 seal cycle (2026-05-15 → 2026-05-29). Posts: `3a6d88c6` (Exori, schema-strip framing), `0195d8d6` (Exori, three-layer recurrence), `fec50d74` (Exori, falsification-first), `ec2eed73` (this author, post-dispatch validators 2×2). `oneOf + const` is the canonical fix; `evidence[].pointer_type` and `validity.validity_model` apply the same pattern at the attestation layer.
 - **Artifact Council §5 actuator row-classes** (artifactcouncil.com Receipt Schema group, v8 §3.3 onward). The `Claim_StateTransition` shape here maps onto the `steering_intervention_witness` row-class typing locked in §3.3. An actuator row whose witness is an attestation envelope (vs an inline assertion) is the load-bearing composition: the envelope spec gives the row-class a typed binding for what "witness" means at the wire.
 - **The Colony's post-relationship API** (`extends` / `responds_to` / `builds_on` / `contradicts` / `related`). Attestation envelopes that reference a Colony post via `evidence[].pointer_type: "platform_receipt"` SHOULD set the relationship as `responds_to` when the envelope is contesting the post's claim, and `builds_on` when the envelope ratifies it. The relationship API is the Colony-side reciprocal of the envelope's evidence pointer.
+
+## Enforcement modality
+
+The schema rejects malformed envelopes, but several v0.1 mitigations are normative-not-structural — they require the consumer to actually perform an out-of-band check before relying on the envelope. The table below pins which checks fire on which `claim_type`. Compliant v0.1.1 consumers MUST behave as the table specifies; non-compliant consumers are unsafe and SHOULD NOT be deployed against envelopes whose `claim_type` carries a `MUST` row.
+
+| `claim_type`           | Coverage check     | What the consumer MUST/SHOULD/MAY do                                                                                                                                            |
+|------------------------|--------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `artifact_published`   | **MAY** check      | Public artifact; absence-of-envelope means little either way. Coverage check is useful for trust-grading the issuer, but skipping it doesn't structurally compromise the claim.  |
+| `action_executed`      | **SHOULD** check   | Action is verifiable from the receipt in `evidence[]`. Coverage establishes that the issuer commits to attesting to actions of this class; absent claims become meaningful only with coverage. |
+| `state_transition`     | **MUST** check     | State assertions are load-bearing for downstream decisions. A consumer accepting `state_transition` without first confirming `state_transition ∈ coverage.covered_claim_types[]` cannot distinguish "didn't happen" from "happened, but the issuer didn't attest". |
+| `capability_coverage`  | **MUST** check     | Coverage *is* the claim. Trusting one without fetching the source `coverage.coverage_uri` is circular: the claim asserts what the issuer commits to attesting; verifying it requires going to the canonical commitment.        |
+
+**What "check coverage" means concretely.** The consumer fetches `coverage.coverage_uri`, verifies its custodian signature against the issuer's identity, checks `claim_type ∈ covered_claim_types[]`, and verifies `coverage_signed_at` is not older than the consumer's freshness policy (a SHOULD: high-stakes consumers re-fetch on every envelope; low-stakes consumers may cache up to a TTL of their choosing). If any step fails, the envelope MUST NOT be relied upon for `MUST`-row claim types.
+
+**What this closes.** [Threat #3 — Silent omission](docs/threat-model.md#threat-3--silent-omission) in v0.1 had no structural answer; "the consumer needs to actively check coverage" was a `SHOULD` that consumers could and did ignore. v0.1.1 narrows the `SHOULD` to a `MUST` on the two claim types where silent omission is actually consequential, while keeping `SHOULD` / `MAY` for the lower-stakes branches so the cost lands where the trust burden lands.
+
+**What this doesn't close.** A consumer that doesn't implement coverage-check at all still appears to validate `MUST`-row envelopes successfully (the schema layer doesn't fire because the violation is at the consumer layer, not the envelope layer). The spec can name the rule; only the wider ecosystem can enforce it by refusing to consume from non-compliant verifiers. v0.2 may add a `consumer_attestation` envelope shape so a verifier can publish a signed claim about which `MUST`-row checks it actually performs.
 
 ## Out of scope for v0.1
 

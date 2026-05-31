@@ -233,11 +233,9 @@
       "required": ["alg", "key_id", "sig"],
       "properties": {
         "alg": {
-          "description": "Signature algorithm. ed25519 is the v0.1 default; secp256k1 included for EVM-key reuse.",
-          "oneOf": [
-            { "type": "string", "const": "ed25519" },
-            { "type": "string", "const": "secp256k1" }
-          ]
+          "description": "Signature algorithm. v0.1 ships ed25519 only — see docs/sigchain.md for why secp256k1 / ecdsa-p256 / BLS12-381 are deferred. New algs are added in dedicated PRs, not in-band per envelope.",
+          "type": "string",
+          "const": "ed25519"
         },
         "key_id": {
           "type": "string",

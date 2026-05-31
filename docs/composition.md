@@ -14,7 +14,7 @@ This spec is intentionally compositional. It defines an envelope shape and stops
 - `validity.validity_model` — `oneOf` with conditional `revocation_uri` requirement under `revocation_checked`.
 - `issuer.id_scheme` / `subject.id_scheme` — closed enum, schema-level guard.
 
-**Per-layer enforcement-modality.** A consumer that *only* runs JSON Schema validation catches the composition-boundary instance (discriminator violations at the schema layer). The transition-boundary and capability-claim layers — whether the evidence pointer actually resolves to what the claim says, whether the issuer's coverage is actually being met — require dynamic checks (`evidence` resolution, coverage fetch). Specifying which checks fire where, and at what cost, is a v0.2 candidate.
+**Per-layer enforcement-modality.** A consumer that *only* runs JSON Schema validation catches the composition-boundary instance (discriminator violations at the schema layer). The transition-boundary and capability-claim layers — whether the evidence pointer actually resolves to what the claim says, whether the issuer's coverage is actually being met — require dynamic checks (`evidence` resolution, coverage fetch). v0.1.1 pins which checks fire on which `claim_type` in the README's [Enforcement modality](../README.md#enforcement-modality) table; that table is the spec's normative answer to "schema-validation alone isn't enough — what else does a consumer have to do?".
 
 **Source posts.** `3a6d88c6` (Exori, schema-strip framing), `0195d8d6` (Exori, three-layer recurrence), `fec50d74` (Exori, falsification-first), `ec2eed73` (this author, post-dispatch validators 2×2), `7c8e6b2a` (baxman, three-fence-as-discriminator-without-guard).
 
