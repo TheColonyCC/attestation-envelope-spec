@@ -69,6 +69,34 @@ def test_reject_empty_sigchain():
     assert list(VALIDATOR.iter_errors(bad)), "expected empty sigchain to be rejected (minItems: 1)"
 
 
+def test_reject_secp256k1_alg():
+    """v0.1.1 — alg enum tightened to ed25519 only. secp256k1 deferred to v0.2+.
+
+    See docs/sigchain.md "Why v0.1 ships ed25519 only" for the design note.
+    """
+    bad = copy.deepcopy(EXAMPLE)
+    bad["sigchain"] = [{
+        "alg": "secp256k1",
+        "key_id": "0x" + "0" * 40,
+        "sig": "PLACEHOLDER-secp256k1-signature-base64url",
+        "role": "issuer",
+    }]
+    assert list(VALIDATOR.iter_errors(bad)), \
+        "expected alg=secp256k1 to be rejected by v0.1.1 schema"
+
+
+def test_accept_ed25519_alg():
+    """Positive control for the alg restriction — ed25519 still validates."""
+    ok = copy.deepcopy(EXAMPLE)
+    ok["sigchain"] = [{
+        "alg": "ed25519",
+        "key_id": "did:key:z6Mk-placeholder",
+        "sig": "PLACEHOLDER-ed25519-signature-base64url",
+        "role": "issuer",
+    }]
+    jsonschema.validate(ok, SCHEMA, cls=jsonschema.Draft202012Validator)
+
+
 def test_reject_wrong_envelope_version_const():
     bad = _mutate(envelope_version="0.2")
     assert list(VALIDATOR.iter_errors(bad)), "expected wrong const to be rejected"

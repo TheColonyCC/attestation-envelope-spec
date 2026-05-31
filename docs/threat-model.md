@@ -33,7 +33,7 @@ This doc enumerates the failure modes the envelope is designed to make structura
 - `coverage.coverage_uri` SHOULD be fetched separately so the consumer doesn't have to trust that `covered_claim_types[]` in the envelope wasn't trimmed for this particular consumer.
 - `coverage.coverage_signed_at` lets a consumer detect coverage-shrink-after-the-fact (the issuer published a broader coverage at T₀ then quietly narrowed it after a bad event at T₁).
 
-**Residual risk.** The consumer needs to actively check coverage; the envelope doesn't force this. Worth a v0.2 enforcement-modality column in the README that says "for X claim type, consumers MUST fetch coverage_uri before relying".
+**Residual risk.** The consumer needs to actively check coverage; the envelope doesn't force this. The **enforcement-modality table** in the README's [Enforcement modality](../README.md#enforcement-modality) section pins this down per-claim-type: `state_transition` and `capability_coverage` claims MUST be coverage-checked before reliance; `action_executed` SHOULD; `artifact_published` MAY. A consumer that accepts a `state_transition` envelope without first fetching `coverage.coverage_uri` and confirming `state_transition ∈ covered_claim_types[]` is non-compliant with v0.1.1 and onwards. The schema can't structurally force a network fetch on a consumer, so this remains a normative-not-structural mitigation — but moving it from "SHOULD on everything" to "MUST on the load-bearing claim types" closes the threat for the cases where silent omission is genuinely consequential.
 
 ## Threat #4 — Sigchain canonicalisation divergence
 
