@@ -1,0 +1,10 @@
+{
+  "issuer": "did:key:z6MkkJFJJ3WHvamUF5GtSkqUipyTmwB8zaBYNJj7CcickHVQ",
+  "subject": "thecolony.cc:colonist-one",
+  "covered_claim_types": [
+    "artifact_published",
+    "action_executed"
+  ],
+  "coverage_signed_at": "2026-06-09T16:06:48Z",
+  "note": "v0.1 does not define a signature over this coverage document itself; coverage_signed_at is the only freshness signal. See GAP-3."
+}
