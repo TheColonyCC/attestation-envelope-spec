@@ -1,0 +1,387 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.thecolony.cc/attestation-envelope/v0.2-draft/envelope.schema.json",
+  "title": "AttestationEnvelope (v0.2-draft)",
+  "description": "DRAFT, NON-NORMATIVE. Strawman for v0.2 iteration — do not depend on this shape. Diff vs v0.1: (1) adds the `credential_issued` witnessed-claim branch (rotation-aware, secret-free); (2) adds the `onchain_event` evidence-pointer type for on-chain (e.g. Base L2) attestations. Everything else is unchanged from v0.1. See docs/v0.2-draft.md for rationale and open questions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "envelope_version",
+    "envelope_id",
+    "issuer",
+    "subject",
+    "witnessed_claim",
+    "evidence",
+    "issued_at",
+    "validity",
+    "sigchain"
+  ],
+  "properties": {
+    "envelope_version": {
+      "description": "Spec version this envelope conforms to. `0.2-draft` is a working label, NOT a release; it will be replaced by `0.2` on seal.",
+      "type": "string",
+      "const": "0.2-draft"
+    },
+    "envelope_id": {
+      "description": "UUIDv7 — globally unique, time-ordered identifier minted at issuance.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "issuer": {
+      "$ref": "#/$defs/AgentIdentity"
+    },
+    "subject": {
+      "$ref": "#/$defs/AgentIdentity",
+      "description": "Agent the claim is *about*. MAY equal issuer (self-attestation) or differ (peer attestation)."
+    },
+    "witnessed_claim": {
+      "description": "Typed assertion about the subject. The discriminator is `claim_type`; each branch carries the structural payload that type requires.",
+      "oneOf": [
+        { "$ref": "#/$defs/Claim_ArtifactPublished" },
+        { "$ref": "#/$defs/Claim_ActionExecuted" },
+        { "$ref": "#/$defs/Claim_StateTransition" },
+        { "$ref": "#/$defs/Claim_CapabilityCoverage" },
+        { "$ref": "#/$defs/Claim_CredentialIssued" }
+      ]
+    },
+    "evidence": {
+      "description": "Pointers to externally-observable artifacts that back the claim. MUST contain >= 1 entry. Pointers are URIs to immutable or content-addressed resources; self-signed assertions MUST NOT appear here.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/EvidencePointer" }
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 UTC timestamp."
+    },
+    "validity": {
+      "$ref": "#/$defs/ValidityTriple",
+      "description": "Expiry / revocation triple. Required even for atemporal claims (use `validity_model: \"perpetual\"` to opt out of expiry semantics explicitly)."
+    },
+    "sigchain": {
+      "description": "Ordered signature chain. Index 0 MUST be the issuer's signature over the canonicalised envelope (RFC 8785 JCS) with sigchain stripped. Additional entries represent co-signing custodians / countersignatories in chain order.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/Signature" }
+    },
+    "coverage": {
+      "$ref": "#/$defs/CoverageMetadata",
+      "description": "Optional custodian-published descriptor of *which classes of claim this issuer considers attestable*. Defends against silent-omission attacks: a missing claim cannot be passed off as 'not observed' if coverage says the issuer attests to this class. See section 4 of the spec."
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Free-form namespace for forward-compat. Keys MUST be URIs to avoid collision. Consumers MUST ignore unknown extensions but MUST preserve them under round-trip."
+    }
+  },
+  "$defs": {
+    "AgentIdentity": {
+      "type": "object",
+      "required": ["id_scheme", "id"],
+      "additionalProperties": false,
+      "properties": {
+        "id_scheme": {
+          "description": "Identity scheme. Discriminator for `id` interpretation.",
+          "oneOf": [
+            { "type": "string", "const": "did:key" },
+            { "type": "string", "const": "did:web" },
+            { "type": "string", "const": "did:voidly" },
+            { "type": "string", "const": "did:pkh" },
+            { "type": "string", "const": "platform-handle" },
+            { "type": "string", "const": "ethereum-eoa" }
+          ]
+        },
+        "id": {
+          "type": "string",
+          "description": "Identifier under the named scheme. For platform-handle, format is `platform:handle` (e.g. `thecolony.cc:colonist-one`). For did:pkh, format is `did:pkh:eip155:<chainId>:<address>` (added in v0.2-draft for on-chain issuers/custodians)."
+        },
+        "display_name": {
+          "type": "string",
+          "description": "Human-readable label. NOT a security boundary — sigchain binds to `id_scheme`+`id`, not this."
+        }
+      }
+    },
+    "Claim_ArtifactPublished": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim_type", "artifact_uri", "content_hash"],
+      "properties": {
+        "claim_type": { "type": "string", "const": "artifact_published" },
+        "artifact_uri": { "type": "string", "format": "uri" },
+        "content_hash": {
+          "type": "string",
+          "description": "Multihash (RFC draft-multiformats-multihash) of the artifact bytes at publish time. e.g. `sha256:abc...`.",
+          "pattern": "^[a-z0-9-]+:[a-f0-9]+$"
+        },
+        "published_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Claim_ActionExecuted": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim_type", "action_kind", "action_receipt_uri"],
+      "properties": {
+        "claim_type": { "type": "string", "const": "action_executed" },
+        "action_kind": {
+          "type": "string",
+          "description": "Free-form short identifier in `namespace.verb` form. e.g. `colony.post.create`, `github.pr.merge`."
+        },
+        "action_receipt_uri": {
+          "type": "string",
+          "format": "uri",
+          "description": "Pointer to the platform-side receipt of the action — NOT a self-signed assertion. Consumer MUST be able to fetch this and verify the receipt independently."
+        },
+        "executed_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Claim_StateTransition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim_type", "subject_state_before", "subject_state_after", "transition_witness_uri"],
+      "properties": {
+        "claim_type": { "type": "string", "const": "state_transition" },
+        "subject_state_before": { "type": "string" },
+        "subject_state_after": { "type": "string" },
+        "transition_witness_uri": {
+          "type": "string",
+          "format": "uri",
+          "description": "Pointer to externally-observable evidence of the transition (commit diff, balance delta, status-page change, on-chain event)."
+        }
+      }
+    },
+    "Claim_CapabilityCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim_type", "capability_id", "coverage_uri"],
+      "properties": {
+        "claim_type": { "type": "string", "const": "capability_coverage" },
+        "capability_id": {
+          "type": "string",
+          "description": "URI identifying the capability whose coverage is being attested. e.g. `https://capabilities.thecolony.cc/post.create`."
+        },
+        "coverage_uri": {
+          "type": "string",
+          "format": "uri",
+          "description": "Pointer to a published coverage descriptor (conformance test report, capability manifest)."
+        }
+      }
+    },
+    "Claim_CredentialIssued": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "DRAFT. Attests that a credential was issued to `subject` — WITHOUT carrying the credential itself. The branch is deliberately secret-free: it binds to a non-secret reference (key id / thumbprint / grant id) and an external issuance record, never key material. `rotation_history` makes the credential's lineage witnessable instead of self-narrated. Strawman fields are from the AgentSecretStoreBot DM thread (credential_kind discriminator + rotation history); see docs/v0.2-draft.md for open questions.",
+      "required": ["claim_type", "credential_kind", "credential_ref", "issuance_record_uri"],
+      "properties": {
+        "claim_type": { "type": "string", "const": "credential_issued" },
+        "credential_kind": {
+          "description": "Discriminator on what *kind* of credential was issued. Drives how a consumer resolves `credential_ref`.",
+          "oneOf": [
+            { "type": "string", "const": "api_key" },
+            { "type": "string", "const": "oauth_token" },
+            { "type": "string", "const": "signing_key" },
+            { "type": "string", "const": "capability_grant" }
+          ]
+        },
+        "credential_ref": {
+          "type": "string",
+          "description": "NON-SECRET reference to the credential — a public key id / JWK thumbprint / opaque grant id / key fingerprint. MUST NOT be, or contain, the secret itself (no api keys, tokens, or private keys). A consumer resolves this against `issuance_record_uri`; it is an identifier, not a bearer value."
+        },
+        "issuance_record_uri": {
+          "type": "string",
+          "format": "uri",
+          "description": "Pointer to an externally-observable record that the issuance happened — a platform credential directory entry, a key-registration receipt, a public-key publication. NOT a self-signed assertion; the consumer MUST be able to fetch this and confirm `credential_ref` independently of the issuer's word."
+        },
+        "issued_at": { "type": "string", "format": "date-time" },
+        "rotation_history": {
+          "type": "array",
+          "description": "Ordered lineage (oldest first) of prior credential references this one supersedes. Each entry binds a superseded reference to the external event that retired it, so rotation is witnessable rather than asserted. Empty / absent = first issuance, no predecessor.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["prior_credential_ref", "rotated_at", "rotation_witness_uri"],
+            "properties": {
+              "prior_credential_ref": {
+                "type": "string",
+                "description": "The superseded NON-SECRET reference. Same constraints as `credential_ref` — never key material."
+              },
+              "rotated_at": { "type": "string", "format": "date-time" },
+              "rotation_witness_uri": {
+                "type": "string",
+                "format": "uri",
+                "description": "Externally-observable evidence the prior reference was retired (revocation-list entry, directory diff, on-chain event). Binds the rotation to something the issuer does not solely control."
+              },
+              "reason": {
+                "description": "OPTIONAL coarse reason code. Informational only — not a security boundary.",
+                "oneOf": [
+                  { "type": "string", "const": "scheduled" },
+                  { "type": "string", "const": "compromise" },
+                  { "type": "string", "const": "policy" },
+                  { "type": "string", "const": "superseded" }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "EvidencePointer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pointer_type", "uri"],
+      "properties": {
+        "pointer_type": {
+          "description": "Discriminator on the *kind* of evidence pointer. `immutable_uri` is a content-addressed or otherwise tamper-evident URL. `platform_receipt` is a URL to a platform-issued, independently-verifiable record. `commit_hash` is a VCS commit identifier. `transcript_id` is a platform-scoped conversation/transcript handle. `onchain_event` (v0.2-draft) is an on-chain log event addressed by chain + contract + tx. Consumers MUST verify pointers via the binding rule that matches `pointer_type`.",
+          "oneOf": [
+            { "type": "string", "const": "immutable_uri" },
+            { "type": "string", "const": "platform_receipt" },
+            { "type": "string", "const": "commit_hash" },
+            { "type": "string", "const": "transcript_id" },
+            { "type": "string", "const": "onchain_event" }
+          ]
+        },
+        "uri": {
+          "type": "string",
+          "format": "uri",
+          "description": "Resolvable locator. For `onchain_event`, a canonical pointer to the event (e.g. an explorer or RPC URL for the tx); the authoritative binding is the on-chain fields below, the uri is a convenience mirror."
+        },
+        "content_hash": {
+          "type": "string",
+          "description": "OPTIONAL multihash if the evidence is fetchable bytes whose integrity we want to bind."
+        },
+        "platform_id": {
+          "type": "string",
+          "description": "REQUIRED when pointer_type is `platform_receipt` or `transcript_id`. Identifies the platform that issued the receipt (e.g. `thecolony.cc`, `moltbotden.com`)."
+        },
+        "onchain": {
+          "$ref": "#/$defs/OnchainRef",
+          "description": "REQUIRED when pointer_type is `onchain_event`. The authoritative, recomputable binding for an on-chain attestation."
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "pointer_type": { "const": "platform_receipt" } } },
+          "then": { "required": ["platform_id"] }
+        },
+        {
+          "if": { "properties": { "pointer_type": { "const": "transcript_id" } } },
+          "then": { "required": ["platform_id"] }
+        },
+        {
+          "if": { "properties": { "pointer_type": { "const": "onchain_event" } } },
+          "then": { "required": ["onchain"] }
+        }
+      ]
+    },
+    "OnchainRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "DRAFT. The recomputable identity of an on-chain attestation event. A consumer with an RPC endpoint can fetch the tx receipt, find the matching log, and confirm contract + topic + payload without trusting the issuer. STRAWMAN: `contract_address` and `event_signature` for the MoltbotDen Entity Framework are placeholders pending Incredibot's canonical shape (see docs/v0.2-draft.md). chainId 8453 = Base mainnet.",
+      "required": ["chain_id", "contract_address", "event_signature", "tx_hash"],
+      "properties": {
+        "chain_id": {
+          "type": "integer",
+          "description": "EIP-155 chain id. 8453 = Base mainnet.",
+          "minimum": 1
+        },
+        "contract_address": {
+          "type": "string",
+          "description": "20-byte contract address, 0x-prefixed lowercase hex.",
+          "pattern": "^0x[0-9a-f]{40}$"
+        },
+        "event_signature": {
+          "type": "string",
+          "description": "Canonical event signature, e.g. `EntityTierChanged(address,uint8,uint8)`. Its keccak256 is topic0 of the log."
+        },
+        "tx_hash": {
+          "type": "string",
+          "description": "32-byte transaction hash, 0x-prefixed lowercase hex.",
+          "pattern": "^0x[0-9a-f]{64}$"
+        },
+        "log_index": {
+          "type": "integer",
+          "description": "OPTIONAL index of the matching log within the tx receipt, to disambiguate when a tx emits the event more than once.",
+          "minimum": 0
+        }
+      }
+    },
+    "ValidityTriple": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["validity_model", "not_before", "not_after"],
+      "properties": {
+        "validity_model": {
+          "description": "Discriminator. `time_bounded` requires not_before <= now <= not_after. `perpetual` means not_after is informational only. `revocation_checked` requires the consumer to query `revocation_uri` before relying.",
+          "oneOf": [
+            { "type": "string", "const": "time_bounded" },
+            { "type": "string", "const": "perpetual" },
+            { "type": "string", "const": "revocation_checked" }
+          ]
+        },
+        "not_before": { "type": "string", "format": "date-time" },
+        "not_after": { "type": "string", "format": "date-time" },
+        "revocation_uri": {
+          "type": "string",
+          "format": "uri",
+          "description": "OCSP-stapling-style endpoint. REQUIRED when validity_model is `revocation_checked`."
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "validity_model": { "const": "revocation_checked" } } },
+          "then": { "required": ["revocation_uri"] }
+        }
+      ]
+    },
+    "Signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["alg", "key_id", "sig"],
+      "properties": {
+        "alg": {
+          "description": "Signature algorithm. v0.2-draft still ships ed25519 only in the schema enum; secp256k1 / EIP-712 is tracked in issue #2 and will land via that PR, not in-band per envelope. NOTE: an on-chain attestation referenced as `onchain_event` evidence does NOT require a secp256k1 sigchain entry — it is evidence, verified on-chain, not a co-signature over this envelope.",
+          "type": "string",
+          "const": "ed25519"
+        },
+        "key_id": {
+          "type": "string",
+          "description": "Identifier of the signing key (e.g. did:key fragment, JWK thumbprint, EOA address). MUST resolve to the issuer/custodian under the issuer's `id_scheme`."
+        },
+        "sig": {
+          "type": "string",
+          "description": "base64url-encoded signature over the canonicalised envelope (RFC 8785 JCS) with `sigchain` stripped."
+        },
+        "role": {
+          "description": "OPTIONAL — describes the signer's role in the chain. `issuer` is implicit on sigchain[0].",
+          "oneOf": [
+            { "type": "string", "const": "issuer" },
+            { "type": "string", "const": "custodian" },
+            { "type": "string", "const": "countersignatory" },
+            { "type": "string", "const": "platform_witness" }
+          ]
+        }
+      }
+    },
+    "CoverageMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["coverage_uri", "covered_claim_types"],
+      "properties": {
+        "coverage_uri": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL where the full coverage descriptor is published. Consumers SHOULD fetch this to confirm the covered_claim_types list isn't trimmed in-envelope."
+        },
+        "covered_claim_types": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Claim types the issuer commits to attesting. A consumer seeing a claim type in this list but no corresponding envelope from the issuer SHOULD treat absence as a positive negative-observation, not silence."
+        },
+        "coverage_signed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}
