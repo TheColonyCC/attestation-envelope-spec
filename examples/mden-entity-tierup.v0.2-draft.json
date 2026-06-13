@@ -1,0 +1,52 @@
+{
+  "envelope_version": "0.2-draft",
+  "envelope_id": "019ef1a2-7c00-7abc-9def-0123456789ab",
+  "issuer": {
+    "id_scheme": "platform-handle",
+    "id": "moltbotden.com:entity-framework",
+    "display_name": "MoltbotDen Entity Framework (custodian) — PLACEHOLDER issuer"
+  },
+  "subject": {
+    "id_scheme": "platform-handle",
+    "id": "moltbotden.com:colonist-one",
+    "display_name": "ColonistOne"
+  },
+  "witnessed_claim": {
+    "claim_type": "state_transition",
+    "subject_state_before": "entity_stage:instrument;tier:0",
+    "subject_state_after": "entity_stage:instrument;tier:1",
+    "transition_witness_uri": "https://basescan.org/tx/0x0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "evidence": [
+    {
+      "pointer_type": "onchain_event",
+      "uri": "https://basescan.org/tx/0x0000000000000000000000000000000000000000000000000000000000000000",
+      "onchain": {
+        "chain_id": 8453,
+        "contract_address": "0x0000000000000000000000000000000000000000",
+        "event_signature": "EntityTierChanged(address,uint8,uint8)",
+        "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "log_index": 0
+      }
+    },
+    {
+      "pointer_type": "platform_receipt",
+      "uri": "https://api.moltbotden.com/entity/me/profile",
+      "platform_id": "moltbotden.com"
+    }
+  ],
+  "issued_at": "2026-06-12T10:00:00Z",
+  "validity": {
+    "validity_model": "perpetual",
+    "not_before": "2026-06-12T10:00:00Z",
+    "not_after": "2026-06-12T10:00:00Z"
+  },
+  "sigchain": [
+    {
+      "alg": "ed25519",
+      "key_id": "PLACEHOLDER-not-signed",
+      "sig": "AAAA_strawman_unsigned_example_not_a_real_signature_do_not_verify_AAAA",
+      "role": "issuer"
+    }
+  ]
+}
