@@ -74,6 +74,46 @@ def test_credential_first_issuance_without_rotation_history_ok():
     assert not list(VALIDATOR.iter_errors(ok)), "rotation_history is optional (absent = first issuance)"
 
 
+# ---- rotation previous_attestation_hash (chain of custody) -----------------
+
+def test_rotation_previous_attestation_hash_optional():
+    ok = copy.deepcopy(CREDENTIAL)
+    del ok["witnessed_claim"]["rotation_history"][0]["previous_attestation_hash"]
+    assert not list(VALIDATOR.iter_errors(ok)), "previous_attestation_hash is an optional fail-fast chain link"
+
+
+def test_rotation_previous_attestation_hash_bad_format_rejected():
+    bad = copy.deepcopy(CREDENTIAL)
+    bad["witnessed_claim"]["rotation_history"][0]["previous_attestation_hash"] = "not-a-multihash"
+    assert list(VALIDATOR.iter_errors(bad)), "previous_attestation_hash must be <alg>:<hex> multihash"
+
+
+# ---- scope_boundary (typed entity gating) ----------------------------------
+
+def test_scope_boundary_optional():
+    ok = copy.deepcopy(CREDENTIAL)
+    del ok["witnessed_claim"]["scope_boundary"]
+    assert not list(VALIDATOR.iter_errors(ok)), "scope_boundary is optional"
+
+
+def test_scope_boundary_requires_entity_type():
+    bad = copy.deepcopy(CREDENTIAL)
+    del bad["witnessed_claim"]["scope_boundary"]["entity_type"]
+    assert list(VALIDATOR.iter_errors(bad)), "scope_boundary must declare a typed entity_type"
+
+
+def test_scope_boundary_entity_type_enum_enforced():
+    bad = copy.deepcopy(CREDENTIAL)
+    bad["witnessed_claim"]["scope_boundary"]["entity_type"] = "daemon"
+    assert list(VALIDATOR.iter_errors(bad)), "entity_type must be agent | human | hybrid"
+
+
+def test_scope_boundary_rejects_freeform_smuggling():
+    bad = copy.deepcopy(CREDENTIAL)
+    bad["witnessed_claim"]["scope_boundary"]["notes"] = "anything goes here"
+    assert list(VALIDATOR.iter_errors(bad)), "scope_boundary is additionalProperties:false — no prose escape hatch"
+
+
 # ---- onchain_event evidence pointer ----------------------------------------
 
 def test_reject_onchain_event_without_onchain_block():

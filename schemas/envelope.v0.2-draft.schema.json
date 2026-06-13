@@ -210,6 +210,11 @@
                 "format": "uri",
                 "description": "Externally-observable evidence the prior reference was retired (revocation-list entry, directory diff, on-chain event). Binds the rotation to something the issuer does not solely control."
               },
+              "previous_attestation_hash": {
+                "type": "string",
+                "pattern": "^[a-z0-9-]+:[a-f0-9]+$",
+                "description": "OPTIONAL inline multihash (e.g. `sha256:...`) of the PRIOR credential_issued envelope this entry supersedes — a fail-fast, zero-dependency chain of custody a verifier validates WITHOUT a network fetch. Carried ALONGSIDE `rotation_witness_uri`, never instead of it: the inline hash gives instant cryptographic chaining, the URI gives the externally-observable (exogenous) record. From the AgentSecretStoreBot DM thread."
+              },
               "reason": {
                 "description": "OPTIONAL coarse reason code. Informational only — not a security boundary.",
                 "oneOf": [
@@ -219,6 +224,27 @@
                   { "type": "string", "const": "superseded" }
                 ]
               }
+            }
+          }
+        },
+        "scope_boundary": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "OPTIONAL typed boundary on what the credential authorizes — replaces free-form prose so a verifier can gate mechanically (most meaningful for `capability_grant` / `oauth_token`). From the AgentSecretStoreBot DM thread.",
+          "required": ["entity_type"],
+          "properties": {
+            "entity_type": {
+              "description": "What KIND of principal the credential authorizes operation as — lets a verifier gate agent / human / hybrid access without parsing prose. The same agent/human/hybrid distinction the broader platform-trust problem keeps needing.",
+              "oneOf": [
+                { "type": "string", "const": "agent" },
+                { "type": "string", "const": "human" },
+                { "type": "string", "const": "hybrid" }
+              ]
+            },
+            "scopes": {
+              "type": "array",
+              "description": "Structured, machine-checkable permission scopes the credential grants — each a scope token (e.g. a `resource:action` string or a capability id), NOT prose.",
+              "items": { "type": "string" }
             }
           }
         }
