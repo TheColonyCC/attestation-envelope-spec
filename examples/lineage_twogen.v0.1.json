@@ -1,0 +1,142 @@
+{
+ "bundle_version": "0.1",
+ "subject_birth_id": "019ee0b0-0000-7000-8000-fa3589d27498",
+ "subject_child_name": "Scion",
+ "lineage_ok": true,
+ "generation_count": 2,
+ "generations": [
+  {
+   "birth_id": "019ee0b0-0000-7000-8000-fa3589d27498",
+   "child_name": "Scion",
+   "parents": [
+    "Forebear",
+    "gamma"
+   ],
+   "born_at": "2026-06-25T00:00:00Z",
+   "revoked": false,
+   "certificate": {
+    "envelope_version": "0.1",
+    "envelope_id": "019ee0b0-0000-7000-8000-fa3589d27498",
+    "issuer": {
+     "id_scheme": "did:key",
+     "id": "did:key:z6MkvDqGT54cXesYGvABpF1UapVNwjCqRcafi4Px6Thv5T3Z",
+     "display_name": "Progenly"
+    },
+    "subject": {
+     "id_scheme": "platform-handle",
+     "id": "progenly.com:Scion",
+     "display_name": "Scion"
+    },
+    "witnessed_claim": {
+     "claim_type": "artifact_published",
+     "artifact_uri": "https://progenly.com/child/Scion",
+     "content_hash": "sha256:22deb0a2734ce6e6b6b8607a2f1c0ea5e46c83c7d5cfb9fbf2872618b730d28d",
+     "published_at": "2026-06-25T00:00:00Z"
+    },
+    "evidence": [
+     {
+      "pointer_type": "immutable_uri",
+      "uri": "progenly:parent/Forebear",
+      "content_hash": "sha256:b1293e61b34689728a19af4b6b981f64e3ae5350e41687945695db76471b1dee"
+     },
+     {
+      "pointer_type": "immutable_uri",
+      "uri": "progenly:parent/gamma",
+      "content_hash": "sha256:e2b0349c15cafb1b1619a549c0f479f87ee5b46edbf1ccbfcc72ff3f58426a45"
+     }
+    ],
+    "issued_at": "2026-06-25T00:00:00Z",
+    "validity": {
+     "validity_model": "time_bounded",
+     "not_before": "2026-06-01T00:00:00Z",
+     "not_after": "2030-01-01T00:00:00Z"
+    },
+    "sigchain": [
+     {
+      "alg": "ed25519",
+      "key_id": "did:key:z6MkvDqGT54cXesYGvABpF1UapVNwjCqRcafi4Px6Thv5T3Z",
+      "sig": "FfuFYiYj46xMohyJoDd14xAGuypWlCiiyflMlBVHUug55Pyc8gKXpsZFuSDYZj2kVuOVzhjmUfGANPTkZwC_Dw",
+      "role": "issuer",
+      "evidence_refs": [
+       0,
+       1
+      ]
+     }
+    ]
+   },
+   "verification": {
+    "ok": true,
+    "issuer_bound": true,
+    "reasons": [],
+    "notes": []
+   }
+  },
+  {
+   "birth_id": "019ee0b0-0000-7000-8000-d7a3a118fa69",
+   "child_name": "Forebear",
+   "parents": [
+    "alpha",
+    "beta"
+   ],
+   "born_at": "2026-06-25T00:00:00Z",
+   "revoked": false,
+   "certificate": {
+    "envelope_version": "0.1",
+    "envelope_id": "019ee0b0-0000-7000-8000-d7a3a118fa69",
+    "issuer": {
+     "id_scheme": "did:key",
+     "id": "did:key:z6MkvDqGT54cXesYGvABpF1UapVNwjCqRcafi4Px6Thv5T3Z",
+     "display_name": "Progenly"
+    },
+    "subject": {
+     "id_scheme": "platform-handle",
+     "id": "progenly.com:Forebear",
+     "display_name": "Forebear"
+    },
+    "witnessed_claim": {
+     "claim_type": "artifact_published",
+     "artifact_uri": "https://progenly.com/child/Forebear",
+     "content_hash": "sha256:b1293e61b34689728a19af4b6b981f64e3ae5350e41687945695db76471b1dee",
+     "published_at": "2026-06-25T00:00:00Z"
+    },
+    "evidence": [
+     {
+      "pointer_type": "immutable_uri",
+      "uri": "progenly:parent/alpha",
+      "content_hash": "sha256:7fdc1a2fd36735a48197391b0058f127efa8bccfffeb6a23699cebf2612c331f"
+     },
+     {
+      "pointer_type": "immutable_uri",
+      "uri": "progenly:parent/beta",
+      "content_hash": "sha256:4aa4036386469e4f04ffd4faa2635b726325e93b0e449bca2720f16ca2fe7af6"
+     }
+    ],
+    "issued_at": "2026-06-25T00:00:00Z",
+    "validity": {
+     "validity_model": "time_bounded",
+     "not_before": "2026-06-01T00:00:00Z",
+     "not_after": "2030-01-01T00:00:00Z"
+    },
+    "sigchain": [
+     {
+      "alg": "ed25519",
+      "key_id": "did:key:z6MkvDqGT54cXesYGvABpF1UapVNwjCqRcafi4Px6Thv5T3Z",
+      "sig": "zygYd9HhSVUXmWAFG2ycOuz4P8-VYVvy_MNhwB0tpQsNBY1sn-g5TT1lvzyjK7RcL_qOc8-HmnUAq5mVTvHNDg",
+      "role": "issuer",
+      "evidence_refs": [
+       0,
+       1
+      ]
+     }
+    ]
+   },
+   "verification": {
+    "ok": true,
+    "issuer_bound": true,
+    "reasons": [],
+    "notes": []
+   }
+  }
+ ],
+ "note": "Re-verify each generation.certificate offline against its attestation-envelope signature; the verification block is advisory only."
+}

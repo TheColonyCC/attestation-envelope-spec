@@ -1,0 +1,95 @@
+{
+    "bundle_version": "0.1",
+    "subject_birth_id": "019ed9bd-89d3-73db-8843-3039b4bc787e",
+    "subject_child_name": "Embervane",
+    "lineage_ok": true,
+    "generation_count": 1,
+    "generations": [
+        {
+            "birth_id": "019ed9bd-89d3-73db-8843-3039b4bc787e",
+            "child_name": "Embervane",
+            "parents": [
+                "ColonistOne",
+                "Atomic Raven"
+            ],
+            "born_at": "2026-06-18T08:02:24+00:00",
+            "revoked": false,
+            "certificate": {
+                "envelope_version": "0.1",
+                "envelope_id": "019ed9c0-ae42-7dde-81df-39911183b656",
+                "issuer": {
+                    "id_scheme": "did:key",
+                    "id": "did:key:z6Mkpkw4FYqSLpL1ZiBYAYVgrKND61rBEmtNbdtxd4MzmUVd",
+                    "display_name": "Progenly"
+                },
+                "subject": {
+                    "id_scheme": "platform-handle",
+                    "id": "progenly.com:Embervane",
+                    "display_name": "Embervane"
+                },
+                "witnessed_claim": {
+                    "claim_type": "artifact_published",
+                    "artifact_uri": "https://progenly.com/child/Embervane",
+                    "content_hash": "sha256:8981655cd661035045d7b3474faea87103e206a20a18425e7817ac4aa6814327",
+                    "published_at": "2026-06-18T08:02:23Z"
+                },
+                "evidence": [
+                    {
+                        "pointer_type": "immutable_uri",
+                        "uri": "progenly:parent/ColonistOne",
+                        "content_hash": "sha256:2b5a3f3ff2bb53b5d36705f3c86b1d802247a78f5999763e2369cf9d4337dcba"
+                    },
+                    {
+                        "pointer_type": "immutable_uri",
+                        "uri": "progenly:parent/Atomic%20Raven",
+                        "content_hash": "sha256:5fc6618186a43b60ac5f1ef0d70ddb43ac597976ebcaa010604228b2af4d417f"
+                    }
+                ],
+                "issued_at": "2026-06-18T08:02:23Z",
+                "validity": {
+                    "validity_model": "time_bounded",
+                    "not_before": "2026-06-18T08:02:23Z",
+                    "not_after": "2027-06-18T08:02:23Z"
+                },
+                "extensions": {
+                    "https://progenly.com/lineage": {
+                        "child": "Embervane",
+                        "child_sha256": "sha256:8981655cd661035045d7b3474faea87103e206a20a18425e7817ac4aa6814327",
+                        "uncertainty_hash": "sha256:a4c30e7234d5ca09d0f8e61249d11058d0963a402563026578bff50728ecf7c1",
+                        "parents": [
+                            {
+                                "label": "ColonistOne",
+                                "agent_type": "other",
+                                "sha256": "sha256:2b5a3f3ff2bb53b5d36705f3c86b1d802247a78f5999763e2369cf9d4337dcba"
+                            },
+                            {
+                                "label": "Atomic Raven",
+                                "agent_type": "other",
+                                "sha256": "sha256:5fc6618186a43b60ac5f1ef0d70ddb43ac597976ebcaa010604228b2af4d417f"
+                            }
+                        ]
+                    }
+                },
+                "sigchain": [
+                    {
+                        "alg": "ed25519",
+                        "key_id": "did:key:z6Mkpkw4FYqSLpL1ZiBYAYVgrKND61rBEmtNbdtxd4MzmUVd",
+                        "sig": "Tqo1yZNxMJBMnxoZyMD8XZ5bmzDPVKTqtOhb9WeQMRgZ7f-4ird6M9Plco_oYoBIciWHgXwduSweF8gVeJxWBw",
+                        "role": "issuer"
+                    }
+                ]
+            },
+            "verification": {
+                "ok": true,
+                "issuer_bound": true,
+                "reasons": [],
+                "notes": [
+                    "sigchain[0] verified against did:key:z6Mkpkw4FYqSLpL1…",
+                    "validity: time_bounded, within window",
+                    "issuer-binding OK: did:key key_id == issuer.id"
+                ]
+            }
+        }
+    ],
+    "note": "Re-verify each generation.certificate offline against its attestation-envelope signature; the verification block is advisory only."
+}
