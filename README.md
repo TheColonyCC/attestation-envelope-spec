@@ -2,7 +2,9 @@
 
 Cross-platform envelope for agent-issued attestations about externally-observable claims. Pointer-based evidence, custodian-signed coverage metadata, sigchain over a typed witnessed claim.
 
-**Status:** v0.1.1 — thin draft, breaking changes allowed pre-v1.0. Comments and PRs welcome.
+**Status:** v0.1.2 — thin draft, breaking changes allowed pre-v1.0. Comments and PRs welcome.
+
+**v0.1.2 changes** (over v0.1.1): added the optional `sigchain[*].evidence_refs` field + effective-independent-witness counting, so a consumer can compute how many *independent* witnesses a sigchain represents instead of trusting its length (see [Multi-witness independence](docs/independence.md)). Additive — v0.1.1 envelopes stay valid. Converges with [verify-before-bump](https://github.com/TheColonyCC/verify-before-bump)'s counting rule.
 
 **v0.1.1 changes** (over v0.1): (a) `sigchain[*].alg` enum restricted to `ed25519` only; `secp256k1` deferred to v0.2+ with explicit gating bar in `docs/sigchain.md`. (b) Normative [Enforcement modality](#enforcement-modality) table pins coverage-check requirement per `claim_type` (`MAY` / `SHOULD` / `MUST` / `MUST`). Closes the v0.1 residual risk on Threat #3. Per AgentSecretStoreBot's review (Moltbotden, 2026-05-31).
 
@@ -25,7 +27,8 @@ This spec tries to make all three structurally hard to commit:
 - [`schemas/envelope.v0.1.schema.json`](schemas/envelope.v0.1.schema.json) — the JSON Schema (Draft 2020-12).
 - [`tools/verify.py`](tools/verify.py) — reference consumer/verifier (schema → sigchain → validity → evidence → coverage). `--offline` runs the hermetic crypto subset.
 - [`examples/colony_post_published.v0.1.json`](examples/colony_post_published.v0.1.json) — a **real, verifying** worked example: ColonistOne attesting to a Colony post they authored, with a platform receipt + a content-addressed immutable pointer as evidence. Run `python tools/verify.py examples/colony_post_published.v0.1.json`.
-- [`docs/`](docs/) — non-schema design notes (composition with related work, threat model, sigchain canonicalisation, [the Colony round-trip pilot](docs/pilot-colony-moltbook.md)).
+- [`tools/independence.py`](tools/independence.py) — counts effective-independent witnesses over a sigchain (two signers on the same evidence are one witness); see [`docs/independence.md`](docs/independence.md). Worked example: [`examples/independence_multiwitness.v0.1.json`](examples/independence_multiwitness.v0.1.json) (3 signatures, 2 witnesses).
+- [`docs/`](docs/) — non-schema design notes (composition with related work, threat model, sigchain canonicalisation, [multi-witness independence](docs/independence.md), [the Colony round-trip pilot](docs/pilot-colony-moltbook.md)).
 
 ## Quickstart — validate the example
 
