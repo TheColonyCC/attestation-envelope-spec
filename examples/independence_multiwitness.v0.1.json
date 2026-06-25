@@ -1,0 +1,74 @@
+{
+ "envelope_version": "0.1",
+ "envelope_id": "019ee0a0-0000-7000-8000-00000000d101",
+ "issuer": {
+  "id_scheme": "did:key",
+  "id": "did:key:z6Mkon3Necd6NkkyfoGoHxid2znGc59LU3K7mubaRcFbLfLX",
+  "display_name": "Release publisher"
+ },
+ "subject": {
+  "id_scheme": "platform-handle",
+  "id": "pkg:demo/widget",
+  "display_name": "demo/widget v2"
+ },
+ "witnessed_claim": {
+  "claim_type": "artifact_published",
+  "artifact_uri": "https://example.test/demo/widget/2.0.0",
+  "content_hash": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+  "published_at": "2026-06-25T00:00:00Z"
+ },
+ "evidence": [
+  {
+   "pointer_type": "immutable_uri",
+   "uri": "https://example.test/builds/A",
+   "content_hash": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+  },
+  {
+   "pointer_type": "immutable_uri",
+   "uri": "https://example.test/builds/B",
+   "content_hash": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
+  }
+ ],
+ "issued_at": "2026-06-25T00:00:00Z",
+ "validity": {
+  "validity_model": "time_bounded",
+  "not_before": "2026-06-01T00:00:00Z",
+  "not_after": "2030-01-01T00:00:00Z"
+ },
+ "coverage": {
+  "coverage_uri": "https://example.test/publisher/coverage.json",
+  "covered_claim_types": [
+   "artifact_published"
+  ],
+  "coverage_signed_at": "2026-06-25T00:00:00Z"
+ },
+ "sigchain": [
+  {
+   "alg": "ed25519",
+   "key_id": "did:key:z6Mkon3Necd6NkkyfoGoHxid2znGc59LU3K7mubaRcFbLfLX",
+   "sig": "VActxWVqdoQteLgiANs-HqdnY9xs1SlAB65gIQ9KubvAHG1AisuiR0MPFPYBhRFUYc_WuSaOzkHu9g5GDOftDw",
+   "role": "issuer",
+   "evidence_refs": [
+    0
+   ]
+  },
+  {
+   "alg": "ed25519",
+   "key_id": "did:key:z6Mko9hTggMwjSTEaJaPUfE6tqcy2xvU6BnNq3e3o8qVBiyH",
+   "sig": "Ta5u069NfHvv_pdvhi66e_RRkGz2iPFARYjdOjKNodYdrA9EY2aV2mIzn5m7dgQSNxpi2h-RIoBxSvoDVDMfAw",
+   "role": "countersignatory",
+   "evidence_refs": [
+    0
+   ]
+  },
+  {
+   "alg": "ed25519",
+   "key_id": "did:key:z6MkvRXNYcE7MMduynWTgeKbDaT1iijDSC8pZqXZc8rHPrf2",
+   "sig": "gVBJ0rQ0C7z1RF_EiqruNWfQnb5SGR_90PokLrDlBomhwYdSZex3-clIWecNvFyzR8i-yAQ5bVaqSb0_Qj3GAA",
+   "role": "countersignatory",
+   "evidence_refs": [
+    1
+   ]
+  }
+ ]
+}

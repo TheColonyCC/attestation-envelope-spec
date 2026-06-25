@@ -253,6 +253,11 @@
             { "type": "string", "const": "countersignatory" },
             { "type": "string", "const": "platform_witness" }
           ]
+        },
+        "evidence_refs": {
+          "description": "OPTIONAL — indices into the top-level `evidence[]` array that THIS signer independently re-derived its signature from. Lets a consumer count effective-independent witnesses over the sigchain instead of trusting len(sigchain): two signers whose evidence_refs resolve to the same `content_hash` are one witness, not two (see docs/independence.md). A signer that omits this, or points only at evidence without a `content_hash`, earns nothing toward independence (undeclared provenance == assume correlated).",
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 }
         }
       }
     },
