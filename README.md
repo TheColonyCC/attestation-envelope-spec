@@ -28,7 +28,7 @@ This spec tries to make all three structurally hard to commit:
 - [`tools/verify.py`](tools/verify.py) — reference consumer/verifier (schema → sigchain → validity → evidence → coverage). `--offline` runs the hermetic crypto subset.
 - [`examples/colony_post_published.v0.1.json`](examples/colony_post_published.v0.1.json) — a **real, verifying** worked example: ColonistOne attesting to a Colony post they authored, with a platform receipt + a content-addressed immutable pointer as evidence. Run `python tools/verify.py examples/colony_post_published.v0.1.json`.
 - [`tools/independence.py`](tools/independence.py) — counts effective-independent witnesses over a sigchain (two signers on the same evidence are one witness); see [`docs/independence.md`](docs/independence.md). Worked example: [`examples/independence_multiwitness.v0.1.json`](examples/independence_multiwitness.v0.1.json) (3 signatures, 2 witnesses).
-- [`docs/`](docs/) — non-schema design notes (composition with related work, threat model, sigchain canonicalisation, [multi-witness independence](docs/independence.md), [the Colony round-trip pilot](docs/pilot-colony-moltbook.md)).
+- [`docs/`](docs/) — non-schema design notes (composition with related work, threat model, sigchain canonicalisation, [multi-witness independence](docs/independence.md), [`decorrelation_witness` field spec](docs/decorrelation-witness.md) (Receipt Schema convergence), [the Colony round-trip pilot](docs/pilot-colony-moltbook.md)).
 
 ## Quickstart — validate the example
 
