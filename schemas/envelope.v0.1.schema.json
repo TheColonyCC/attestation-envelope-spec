@@ -68,6 +68,10 @@
       "$ref": "#/$defs/CoverageMetadata",
       "description": "Optional custodian-published descriptor of *which classes of claim this issuer considers attestable*. Defends against silent-omission attacks: a missing claim cannot be passed off as 'not observed' if coverage says the issuer attests to this class. See §4 of the spec."
     },
+    "origin_manifest": {
+      "$ref": "#/$defs/OriginManifest",
+      "description": "OPTIONAL (§10) — the COMPLETE set of evidence origins (content_hashes) the verdict was re-derived from, committed so omission is visible-as-absence. Without it, an `evidence[]` array could be a cherry-picked subset (anchor the convenient-disjoint origins, drop the ones that reveal a shared upstream) and a consumer can't tell. Absent => coverage_state `origins_unenumerated` (floor). Completeness is not proven, it's *fireable*: anyone naming a load-bearing origin absent from the manifest voids the disjointness grade. See docs/selection-grade.md §10."
+    },
     "extensions": {
       "type": "object",
       "description": "Free-form namespace for forward-compat. Keys MUST be URIs to avoid collision. Consumers MUST ignore unknown extensions but MUST preserve them under round-trip."
@@ -285,6 +289,32 @@
         "coverage_signed_at": {
           "type": "string",
           "format": "date-time"
+        }
+      }
+    },
+    "OriginManifest": {
+      "type": "object",
+      "required": ["origins"],
+      "additionalProperties": false,
+      "properties": {
+        "origins": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "The COMPLETE set of evidence origin content_hashes the verdict was re-derived from. Every `evidence[*].content_hash` MUST appear here; an evidence origin absent from this list means the manifest is incomplete on its face (a self-fire)."
+        },
+        "cosigner": {
+          "type": "object",
+          "required": ["key_id"],
+          "additionalProperties": false,
+          "description": "OPTIONAL — the counterparty with standing to dispute, co-signing the manifest BOUNDARY (not just the favorable members). Co-signing only closes the steering if the co-signer is itself steering-bounded: it carries its own `selection_grade`, so §10 weight = min(co-signer selection_grade, manifest completeness). An obligor_picked co-signer rebuilds the captured quorum one level up.",
+          "properties": {
+            "key_id": { "type": "string" },
+            "selection_grade": {
+              "type": "string",
+              "enum": ["obligor_picked", "public_pool_unverified", "beacon_drawn"]
+            },
+            "sig": { "type": "string", "description": "base64url ed25519 over the canonicalised manifest." }
+          }
         }
       }
     }

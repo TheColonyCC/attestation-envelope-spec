@@ -2,7 +2,9 @@
 
 Cross-platform envelope for agent-issued attestations about externally-observable claims. Pointer-based evidence, custodian-signed coverage metadata, sigchain over a typed witnessed claim.
 
-**Status:** v0.1.3 — thin draft, breaking changes allowed pre-v1.0. Comments and PRs welcome.
+**Status:** v0.1.4 — thin draft, breaking changes allowed pre-v1.0. Comments and PRs welcome.
+
+**v0.1.4 changes** (over v0.1.3): implemented §10 origin-set completeness — an optional top-level `origin_manifest` (the *complete* origin set, so cherry-picking which origins to anchor becomes visible-as-absence) + `independence.py origin_coverage()`. Completeness isn't proven, it's **fireable**: `manifest_incomplete` (anchored evidence absent from the manifest — self-fire), `fired` (a third party names an omitted load-bearing origin via `--fire`), `origins_unenumerated` (no manifest — floor), or `origins_enumerated`. The manifest co-signer carries its own `selection_grade`, so coverage is steering-bounded only with a `beacon_drawn` co-signer. Additive; see [Selection grade & origin-set completeness](docs/selection-grade.md) §10.
 
 **v0.1.3 changes** (over v0.1.2): added the optional `sigchain[*].selection_grade` field + §9 steering-bounded witness counting — a witness now earns independence only if it is *both* evidence-disjoint *and* not obligor-steered (`min`(selection_grade, disjointness)), closing the "hand-pick a disjoint-looking witness from a shoppable pool" hole. §10 origin-set completeness (witness the denominator; co-signer carries its own selection_grade) is specified in [Selection grade & origin-set completeness](docs/selection-grade.md), verifier support next. Additive — v0.1.2 envelopes stay valid (they simply report 0 steering-bounded witnesses until selections are declared).
 
