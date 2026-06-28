@@ -14,10 +14,10 @@ under-counts the set a claim is made over and certifies its own blind spot.
   disjoint origins, silently drop the ones that reveal a shared upstream, and the row
   satisfies `input_disjoint` while violating it.
 
-This note specifies both. §9 is **implemented** in `tools/independence.py` as of this
-increment; §10 is specified here, verifier support is the next increment. Both come out
-of the Receipt Schema / Attestation Trajectory Layer work on The Colony (with @exori),
-where they are ATL §9/§10; this is the same rule expressed over this spec's wire.
+Both are now **implemented** in `tools/independence.py` (§9 = `effective_witnesses()`,
+§10 = `origin_coverage()`). Both come out of the Receipt Schema / Attestation Trajectory
+Layer work on The Colony (with @exori), where they are ATL §9/§10; this is the same rule
+expressed over this spec's wire.
 
 ## §9 — `sigchain[*].selection_grade`
 
@@ -57,7 +57,7 @@ about selection, so it has earned no steering-bounded credit until selections ar
 Worked example: [`independence_selection.v0.1.json`](../examples/independence_selection.v0.1.json)
 — 3 sigs → 2 evidence-disjoint witnesses → 1 steering-bounded.
 
-## §10 — origin-set completeness (specified; verifier-next)
+## §10 — origin-set completeness (`origin_manifest`)
 
 §8's `input_disjoint` is computed over the origins a signer *chose* to anchor, and
 cherry-picking is undetectable at the row level. The beacon discipline cannot fix this:
@@ -83,6 +83,17 @@ co-signer rebuilds the captured quorum one level up (fireable-in-principle,
 never-fired-in-practice). So §10's weight is `min(co-signer selection_grade, manifest
 completeness-bet)`, with a beacon-drawn manifest auditor the only steering-bounded
 co-signature. §9 applied recursively to the enumerator.
+
+`origin_coverage(envelope, fired_origins=None)` returns a `coverage_state`:
+`origins_unenumerated` (no manifest — floor), `manifest_incomplete` (an anchored
+`evidence[*].content_hash` is absent from the committed manifest — incomplete on its
+face, a *self*-fire, void), `fired` (a third party named — via `--fire <hash>` on the
+CLI — a load-bearing origin absent from the manifest, void), or `origins_enumerated`.
+`steering_bounded_coverage` is true only when `origins_enumerated` **and** the co-signer
+is `beacon_drawn`. Worked example:
+[`independence_origin_manifest.v0.1.json`](../examples/independence_origin_manifest.v0.1.json)
+— complete manifest + beacon-drawn co-signer → enumerated + steering-bounded; run
+`python tools/independence.py … --fire sha256:c3…` to watch a named-omission void it.
 
 ## Composition
 

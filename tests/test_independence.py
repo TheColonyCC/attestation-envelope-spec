@@ -156,3 +156,73 @@ def test_selection_example_validates_and_counts():
     jsonschema.validate(ex, SCHEMA, cls=jsonschema.Draft202012Validator)  # selection_grade in schema
     r = independence.effective_witnesses(ex)
     assert r["signatures"] == 3 and r["witnesses"] == 2 and r["steering_bounded_witnesses"] == 1
+
+
+# --- §10 origin-set completeness -----------------------------------------------
+
+HC = "sha256:" + "c3" * 32
+
+
+def _env_m(evidence, sigchain, manifest=None):
+    e = {"evidence": evidence, "sigchain": sigchain}
+    if manifest is not None:
+        e["origin_manifest"] = manifest
+    return e
+
+
+def test_no_manifest_is_unenumerated_floor():
+    env = _env_m([{"pointer_type": "immutable_uri", "uri": "u0", "content_hash": HA}],
+                 [{"alg": "ed25519", "key_id": "did:key:zA", "sig": "x", "evidence_refs": [0]}])
+    assert independence.origin_coverage(env)["coverage_state"] == "origins_unenumerated"
+
+
+def test_complete_manifest_enumerated():
+    env = _env_m([{"pointer_type": "immutable_uri", "uri": "u0", "content_hash": HA},
+                  {"pointer_type": "immutable_uri", "uri": "u1", "content_hash": HB}],
+                 [{"alg": "ed25519", "key_id": "did:key:zA", "sig": "x", "evidence_refs": [0, 1]}],
+                 {"origins": [HA, HB]})
+    r = independence.origin_coverage(env)
+    assert r["coverage_state"] == "origins_enumerated" and r["manifest_origins"] == 2
+
+
+def test_manifest_incomplete_self_fire():
+    # evidence anchors HB but the committed manifest omits it -> incomplete on its face
+    env = _env_m([{"pointer_type": "immutable_uri", "uri": "u0", "content_hash": HA},
+                  {"pointer_type": "immutable_uri", "uri": "u1", "content_hash": HB}],
+                 [{"alg": "ed25519", "key_id": "did:key:zA", "sig": "x", "evidence_refs": [0, 1]}],
+                 {"origins": [HA]})
+    r = independence.origin_coverage(env)
+    assert r["coverage_state"] == "manifest_incomplete" and r["self_missing"] == [HB]
+
+
+def test_third_party_fire_voids():
+    env = _env_m([{"pointer_type": "immutable_uri", "uri": "u0", "content_hash": HA}],
+                 [{"alg": "ed25519", "key_id": "did:key:zA", "sig": "x", "evidence_refs": [0]}],
+                 {"origins": [HA]})
+    r = independence.origin_coverage(env, fired_origins=[HC])
+    assert r["coverage_state"] == "fired" and r["fired"] == [HC]
+    # firing an origin already in the manifest changes nothing
+    assert independence.origin_coverage(env, fired_origins=[HA])["coverage_state"] == "origins_enumerated"
+
+
+def test_cosigner_selection_grade_gates_coverage():
+    base_ev = [{"pointer_type": "immutable_uri", "uri": "u0", "content_hash": HA}]
+    base_sig = [{"alg": "ed25519", "key_id": "did:key:zA", "sig": "x", "evidence_refs": [0]}]
+    beacon = _env_m(base_ev, base_sig,
+                    {"origins": [HA], "cosigner": {"key_id": "did:key:zX", "selection_grade": "beacon_drawn"}})
+    assert independence.origin_coverage(beacon)["steering_bounded_coverage"] is True
+    # obligor_picked co-signer: enumerated but NOT steering-bounded (captured a level up)
+    picked = _env_m(base_ev, base_sig,
+                    {"origins": [HA], "cosigner": {"key_id": "did:key:zX", "selection_grade": "obligor_picked"}})
+    rp = independence.origin_coverage(picked)
+    assert rp["coverage_state"] == "origins_enumerated" and rp["steering_bounded_coverage"] is False
+    # co-signer with no grade declared -> fail closed to obligor_picked
+    ungraded = _env_m(base_ev, base_sig, {"origins": [HA], "cosigner": {"key_id": "did:key:zX"}})
+    assert independence.origin_coverage(ungraded)["cosigner_grade"] == "obligor_picked"
+
+
+def test_origin_manifest_example_validates_and_covers():
+    ex = json.loads((ROOT / "examples" / "independence_origin_manifest.v0.1.json").read_text())
+    jsonschema.validate(ex, SCHEMA, cls=jsonschema.Draft202012Validator)
+    r = independence.origin_coverage(ex)
+    assert r["coverage_state"] == "origins_enumerated" and r["steering_bounded_coverage"] is True

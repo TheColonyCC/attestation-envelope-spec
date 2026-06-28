@@ -128,11 +128,77 @@ def effective_witnesses(envelope: dict) -> dict:
     }
 
 
+def _evidence_origins(envelope: dict) -> set:
+    """Every content_hash anchored in evidence[]."""
+    out = set()
+    for e in envelope.get("evidence", []) or []:
+        ch = str(e.get("content_hash", "") or "").strip().lower()
+        if ch:
+            out.add(ch)
+    return out
+
+
+def origin_coverage(envelope: dict, fired_origins=None) -> dict:
+    """§10 origin-set completeness over an envelope's committed `origin_manifest`.
+
+    Disjointness (§8) is computed over the origins the obligor *chose* to anchor;
+    cherry-picking (anchor the convenient-disjoint origins, drop the ones that reveal
+    a shared upstream) is undetectable at the row level. §10 closes it by witnessing
+    the denominator: a committed `origin_manifest` lists the COMPLETE origin set, so
+    omission becomes visible-as-absence rather than silent.
+
+    Returns ``{coverage_state, manifest_origins, cosigner_grade,
+    steering_bounded_coverage, fired, self_missing}`` where ``coverage_state`` is:
+      - ``origins_unenumerated`` — no manifest (floor); evidence[] may be a subset.
+      - ``manifest_incomplete`` — an anchored evidence origin is absent from the
+        committed manifest => the manifest is incomplete on its face (self-fire, void).
+      - ``fired`` — a third party named (``fired_origins``) a load-bearing origin
+        absent from the manifest (the fireable case: completeness isn't proven, it's
+        falsifiable). Void.
+      - ``origins_enumerated`` — manifest present and consistent.
+    Completeness is never *proven* from inside; the manifest is a signed denominator
+    anyone can fire. The co-signer carries its own selection_grade (§9 applied to the
+    enumerator): coverage is steering-bounded only when enumerated AND the co-signer is
+    ``beacon_drawn`` — an obligor_picked co-signer rebuilds the captured quorum a level up.
+    """
+    manifest = envelope.get("origin_manifest")
+    ev_origins = _evidence_origins(envelope)
+    fired = [str(h).strip().lower() for h in (fired_origins or []) if str(h).strip()]
+    if not manifest:
+        return {"coverage_state": "origins_unenumerated", "manifest_origins": 0,
+                "cosigner_grade": None, "steering_bounded_coverage": False,
+                "fired": [], "self_missing": []}
+    declared = {str(h).strip().lower() for h in (manifest.get("origins") or []) if str(h).strip()}
+    self_missing = sorted(ev_origins - declared)
+    fired_hits = sorted(h for h in fired if h not in declared)
+    cosigner = manifest.get("cosigner") or {}
+    cosigner_grade = _selection_grade(cosigner) if cosigner.get("key_id") else None
+    if self_missing:
+        state = "manifest_incomplete"
+    elif fired_hits:
+        state = "fired"
+    else:
+        state = "origins_enumerated"
+    return {
+        "coverage_state": state,
+        "manifest_origins": len(declared),
+        "cosigner_grade": cosigner_grade,
+        "steering_bounded_coverage": state == "origins_enumerated" and cosigner_grade == STEERING_BOUNDED,
+        "fired": fired_hits,
+        "self_missing": self_missing,
+    }
+
+
 def main(argv=None) -> int:
     argv = argv if argv is not None else sys.argv[1:]
     if not argv:
-        print("usage: python tools/independence.py <envelope.json>", file=sys.stderr)
+        print("usage: python tools/independence.py <envelope.json> [--fire <content_hash>…]", file=sys.stderr)
         return 2
+    fired = []
+    if "--fire" in argv:
+        i = argv.index("--fire")
+        fired = argv[i + 1:]
+        argv = argv[:i]
     env = json.loads(open(argv[0]).read())
     r = effective_witnesses(env)
     print(f"{r['signatures']} signature(s) -> {r['witnesses']} evidence-disjoint witness(es)"
@@ -143,6 +209,14 @@ def main(argv=None) -> int:
         print(f"  steered (anchored but not beacon_drawn, earns nothing toward §9): {r['steered']}")
     if r["unanchored"]:
         print(f"  unanchored (no content-addressed evidence, earns nothing): {r['unanchored']}")
+    cov = origin_coverage(env, fired_origins=fired)
+    print(f"§10 origin coverage: {cov['coverage_state']}"
+          + (f" (manifest: {cov['manifest_origins']} origins, co-signer {cov['cosigner_grade']},"
+             f" steering-bounded={cov['steering_bounded_coverage']})" if cov['manifest_origins'] else ""))
+    if cov["self_missing"]:
+        print(f"  manifest incomplete — anchored evidence absent from manifest: {cov['self_missing']}")
+    if cov["fired"]:
+        print(f"  FIRED — named origins absent from committed manifest: {cov['fired']}")
     return 0
 
 
