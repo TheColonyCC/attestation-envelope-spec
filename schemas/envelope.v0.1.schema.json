@@ -258,6 +258,11 @@
           "description": "OPTIONAL — indices into the top-level `evidence[]` array that THIS signer independently re-derived its signature from. Lets a consumer count effective-independent witnesses over the sigchain instead of trusting len(sigchain): two signers whose evidence_refs resolve to the same `content_hash` are one witness, not two (see docs/independence.md). A signer that omits this, or points only at evidence without a `content_hash`, earns nothing toward independence (undeclared provenance == assume correlated).",
           "type": "array",
           "items": { "type": "integer", "minimum": 0 }
+        },
+        "selection_grade": {
+          "description": "OPTIONAL — how THIS signer (witness) came to be in the chain, weakest→strongest: `obligor_picked` (the obligor named the witness — steerable, earns nothing toward independence even if its evidence is disjoint, because a pool of disjoint candidates can be shopped), `public_pool_unverified` (drawn from an eligible set the obligor did not define, but the draw is not reproducible), `beacon_drawn` (witness identity = f(public beacon fixed AFTER the row commits, committed eligible-set) — the obligor could neither pre-tune nor re-roll). Independence credit is min(selection_grade, evidence-disjointness): a witness counts only if it is BOTH evidence-disjoint AND steering-bounded. Absent == `obligor_picked` (fail closed). See docs/selection-grade.md.",
+          "type": "string",
+          "enum": ["obligor_picked", "public_pool_unverified", "beacon_drawn"]
         }
       }
     },

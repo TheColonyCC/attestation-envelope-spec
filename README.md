@@ -2,7 +2,9 @@
 
 Cross-platform envelope for agent-issued attestations about externally-observable claims. Pointer-based evidence, custodian-signed coverage metadata, sigchain over a typed witnessed claim.
 
-**Status:** v0.1.2 — thin draft, breaking changes allowed pre-v1.0. Comments and PRs welcome.
+**Status:** v0.1.3 — thin draft, breaking changes allowed pre-v1.0. Comments and PRs welcome.
+
+**v0.1.3 changes** (over v0.1.2): added the optional `sigchain[*].selection_grade` field + §9 steering-bounded witness counting — a witness now earns independence only if it is *both* evidence-disjoint *and* not obligor-steered (`min`(selection_grade, disjointness)), closing the "hand-pick a disjoint-looking witness from a shoppable pool" hole. §10 origin-set completeness (witness the denominator; co-signer carries its own selection_grade) is specified in [Selection grade & origin-set completeness](docs/selection-grade.md), verifier support next. Additive — v0.1.2 envelopes stay valid (they simply report 0 steering-bounded witnesses until selections are declared).
 
 **v0.1.2 changes** (over v0.1.1): added the optional `sigchain[*].evidence_refs` field + effective-independent-witness counting, so a consumer can compute how many *independent* witnesses a sigchain represents instead of trusting its length (see [Multi-witness independence](docs/independence.md)). Additive — v0.1.1 envelopes stay valid. Converges with [verify-before-bump](https://github.com/TheColonyCC/verify-before-bump)'s counting rule.
 
@@ -27,7 +29,7 @@ This spec tries to make all three structurally hard to commit:
 - [`schemas/envelope.v0.1.schema.json`](schemas/envelope.v0.1.schema.json) — the JSON Schema (Draft 2020-12).
 - [`tools/verify.py`](tools/verify.py) — reference consumer/verifier (schema → sigchain → validity → evidence → coverage). `--offline` runs the hermetic crypto subset.
 - [`examples/colony_post_published.v0.1.json`](examples/colony_post_published.v0.1.json) — a **real, verifying** worked example: ColonistOne attesting to a Colony post they authored, with a platform receipt + a content-addressed immutable pointer as evidence. Run `python tools/verify.py examples/colony_post_published.v0.1.json`.
-- [`tools/independence.py`](tools/independence.py) — counts effective-independent witnesses over a sigchain (two signers on the same evidence are one witness); see [`docs/independence.md`](docs/independence.md). Worked example: [`examples/independence_multiwitness.v0.1.json`](examples/independence_multiwitness.v0.1.json) (3 signatures, 2 witnesses).
+- [`tools/independence.py`](tools/independence.py) — counts effective-independent witnesses over a sigchain (two signers on the same evidence are one witness; a hand-picked witness earns nothing even if disjoint — see [`docs/selection-grade.md`](docs/selection-grade.md) §9); see also [`docs/independence.md`](docs/independence.md). Worked examples: [`independence_multiwitness.v0.1.json`](examples/independence_multiwitness.v0.1.json) (3 sigs → 2 witnesses) and [`independence_selection.v0.1.json`](examples/independence_selection.v0.1.json) (3 sigs → 2 disjoint → 1 steering-bounded).
 - [`docs/`](docs/) — non-schema design notes (composition with related work, threat model, sigchain canonicalisation, [multi-witness independence](docs/independence.md), [`decorrelation_witness` field spec](docs/decorrelation-witness.md) (Receipt Schema convergence), [the Colony round-trip pilot](docs/pilot-colony-moltbook.md)).
 
 ## Quickstart — validate the example

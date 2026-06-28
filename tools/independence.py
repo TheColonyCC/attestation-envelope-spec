@@ -28,6 +28,20 @@ from __future__ import annotations
 import json
 import sys
 
+# §9 selection_grade — whether the OBLIGOR got to choose the witness, weakest→strongest.
+# Evidence-disjointness (§8) grades whether a witness IS independent; selection_grade
+# grades whether you got to PICK it. Independence credit is min of the two: a witness
+# counts only if it is BOTH evidence-disjoint AND steering-bounded, because an obligor
+# that hand-picks from a pool can shop for a disjoint-looking witness. Only `beacon_drawn`
+# is steering-bounded (fixed after commit, no re-roll). Absent == obligor_picked (fail closed).
+SELECTION_TIERS = {"obligor_picked": 0, "public_pool_unverified": 1, "beacon_drawn": 2}
+STEERING_BOUNDED = "beacon_drawn"
+
+
+def _selection_grade(signer: dict) -> str:
+    g = str(signer.get("selection_grade", "") or "").strip().lower()
+    return g if g in SELECTION_TIERS else "obligor_picked"
+
 
 def _origins(signer: dict, evidence: list) -> set:
     """The set of evidence content_hashes this signer re-derived from. An
@@ -65,18 +79,27 @@ def effective_witnesses(envelope: dict) -> dict:
     def union(a, b):
         parent[find(a)] = find(b)
 
-    anchored, unanchored = [], []
+    anchored, unanchored, steered = [], [], []
+    selection_grades: dict = {}
     origin_owner: dict = {}
     sig_origins: dict = {}
+    node_bounded: dict = {}   # node -> is this signer steering-bounded (beacon_drawn)
     for i, signer in enumerate(chain):
         kid = str(signer.get("key_id") or f"sig{i}")
+        grade = _selection_grade(signer)
+        selection_grades[kid] = grade
         origins = _origins(signer, evidence)
         if not origins:
             unanchored.append(kid)
             continue
         anchored.append(kid)
+        # §9: an anchored signer that isn't steering-bounded earns nothing toward
+        # the §9 count — the obligor could have shopped a disjoint-looking witness.
+        if grade != STEERING_BOUNDED:
+            steered.append(kid)
         sig_origins[("sig", i)] = origins
         node = ("sig", i)
+        node_bounded[node] = grade == STEERING_BOUNDED
         find(node)
         for o in origins:
             if o in origin_owner:
@@ -85,13 +108,22 @@ def effective_witnesses(envelope: dict) -> dict:
                 origin_owner[o] = node
 
     roots: dict = {}
+    root_bounded: dict = {}
     for node, origins in sig_origins.items():
-        roots.setdefault(find(node), set()).update(origins)
+        r = find(node)
+        roots.setdefault(r, set()).update(origins)
+        root_bounded[r] = root_bounded.get(r, False) or node_bounded.get(node, False)
+    # §9 count: an evidence-disjoint cluster earns independence only if at least one
+    # of its signers is steering-bounded (min(selection_grade, disjointness)).
+    steering_bounded_witnesses = sum(1 for r in roots if root_bounded.get(r))
     return {
         "witnesses": len(roots),
+        "steering_bounded_witnesses": steering_bounded_witnesses,
         "signatures": len(chain),
         "anchored": anchored,
         "unanchored": unanchored,
+        "steered": steered,
+        "selection_grades": selection_grades,
         "clusters": [sorted(o) for o in roots.values()],
     }
 
@@ -103,9 +135,12 @@ def main(argv=None) -> int:
         return 2
     env = json.loads(open(argv[0]).read())
     r = effective_witnesses(env)
-    print(f"{r['signatures']} signature(s) -> {r['witnesses']} effective-independent witness(es)")
+    print(f"{r['signatures']} signature(s) -> {r['witnesses']} evidence-disjoint witness(es)"
+          f" -> {r['steering_bounded_witnesses']} steering-bounded (§9) witness(es)")
     for c in r["clusters"]:
         print(f"  witness: {c}")
+    if r["steered"]:
+        print(f"  steered (anchored but not beacon_drawn, earns nothing toward §9): {r['steered']}")
     if r["unanchored"]:
         print(f"  unanchored (no content-addressed evidence, earns nothing): {r['unanchored']}")
     return 0

@@ -14,3 +14,4 @@ jobs:
       - run: python tools/verify.py examples/colony_post_published.v0.1.json --offline
       - run: python tools/verify.py examples/independence_multiwitness.v0.1.json --offline
       - run: python tools/independence.py examples/independence_multiwitness.v0.1.json
+      - run: python tools/independence.py examples/independence_selection.v0.1.json
