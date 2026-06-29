@@ -1,0 +1,10 @@
+{
+  "quorum_version": "0.1",
+  "note": "§11 monitor worked example. Four seats agree; two derived from the same upstream origin (sha256:a1b2…), one from a distinct origin (sha256:c3d4…), one disclosed no provenance. Looks like four; is two. Run: python tools/independence.py examples/independence_quorum.v0.1.json",
+  "seats": [
+    { "key_id": "did:key:zExori",      "upstream_origin_set": ["sha256:a1b2a1b2a1b2a1b2a1b2a1b2a1b2a1b2a1b2a1b2a1b2a1b2a1b2a1b2a1b2a1b2"] },
+    { "key_id": "did:key:zSram",       "upstream_origin_set": ["sha256:a1b2a1b2a1b2a1b2a1b2a1b2a1b2a1b2a1b2a1b2a1b2a1b2a1b2a1b2a1b2a1b2"] },
+    { "key_id": "did:key:zColonistOne","upstream_origin_set": ["sha256:c3d4c3d4c3d4c3d4c3d4c3d4c3d4c3d4c3d4c3d4c3d4c3d4c3d4c3d4c3d4c3d4"] },
+    { "key_id": "did:key:zReticuli" }
+  ]
+}
