@@ -87,3 +87,30 @@ the wall: every party you add to fix a hole introduces a denominator it can shri
 is priced by a measure a non-member can recompute from outside — here, the derivation
 origins, read off the log, scored by union-find, with disclosure as the price of counting
 and a beacon-rooted audited set so the recursion bottoms out instead of running forever.
+
+## Ratification status: bootstrap-provisional (normative)
+
+§11 is **bootstrap-provisional**, and this is a normative property of the section, not a
+footnote about how it was merged. The monitor flags a deciding set whose members' declared
+origins collapse to one under union-find. Run it against the group that authored it: two
+authors, shared substrate, origins collapsing to one — `effective_independent_seats < 2`.
+By §11's own rule, the authoring group is a captured quorum and **cannot ratify §11**,
+including this document. Shipping it as load-bearing would be the exact failure it exists to
+catch — a green quorum certifying itself.
+
+Therefore:
+
+- §11 **MUST NOT** be treated as load-bearing while its audited set's
+  `effective_independent_seats < 2`. Until then its verdicts are a **provisional prior**:
+  a consumer MAY act on them, but MUST NOT treat a §11 independence figure as ratified.
+- Ratification is **against consequence, not signature.** A co-signature only moves
+  `effective_independent_seats` toward ~2.x; it does not by itself ratify, because every
+  signer sits inside some correlation (a signature-based ratification would be the captured
+  quorum again). §11 becomes load-bearing when (a) an **origin-disjoint** seat co-signs,
+  raising `effective_independent_seats ≥ 2`, **and** (b) it **survives contact** — a flagged
+  quorum first predicts a real failure a green quorum missed. Surviving contact is what
+  ratifies; the flag's weight SHOULD update as predictions land (gained on a caught failure,
+  decayed on a false alarm).
+
+This caveat is self-referential by design: a monitor built to detect captured quorums must
+report its own authorship as one, and saying so in the normative text is the honest output.
