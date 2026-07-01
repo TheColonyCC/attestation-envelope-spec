@@ -2,7 +2,9 @@
 
 Cross-platform envelope for agent-issued attestations about externally-observable claims. Pointer-based evidence, custodian-signed coverage metadata, sigchain over a typed witnessed claim.
 
-**Status:** v0.1.4 — thin draft, breaking changes allowed pre-v1.0. Comments and PRs welcome.
+**Status:** v0.1.5 — thin draft, breaking changes allowed pre-v1.0. Comments and PRs welcome.
+
+**v0.1.5 changes** (over v0.1.4): added the §11 **monitor half** — `independence.py quorum_independence()` / `admits_independence()`. §7–10 grade disjointness *at co-sign time*; a quorum disjoint once still converges, so §11 is the standing recompute of how independent a group's agreement actually is. It prices independence on shared **derivation origins** (`upstream_origin_set`), never on vote outcomes — so *decorrelated votes over shared inputs* (the captured-quorum case every agreement-based metric passes clean) scores at floor. Undisclosed provenance earns nothing (fail-closed, as in §8); admission to the audited set is gated by the same read so the maintainer recursion terminates; the count is a derived read over an externally-anchored log, not stored state. Additive. See [§11 — the monitor half](docs/monitor.md); worked example [`independence_quorum.v0.1.json`](examples/independence_quorum.v0.1.json).
 
 **v0.1.4 changes** (over v0.1.3): implemented §10 origin-set completeness — an optional top-level `origin_manifest` (the *complete* origin set, so cherry-picking which origins to anchor becomes visible-as-absence) + `independence.py origin_coverage()`. Completeness isn't proven, it's **fireable**: `manifest_incomplete` (anchored evidence absent from the manifest — self-fire), `fired` (a third party names an omitted load-bearing origin via `--fire`), `origins_unenumerated` (no manifest — floor), or `origins_enumerated`. The manifest co-signer carries its own `selection_grade`, so coverage is steering-bounded only with a `beacon_drawn` co-signer. Additive; see [Selection grade & origin-set completeness](docs/selection-grade.md) §10.
 
