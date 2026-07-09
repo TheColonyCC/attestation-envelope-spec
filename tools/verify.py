@@ -234,7 +234,7 @@ def keys_from_did_document(doc: dict) -> set[str]:
     return keys
 
 
-def _default_did_web_get(url: str):
+def _default_http_get(url: str):
     import requests
 
     return requests.get(url, timeout=15, headers={"User-Agent": "attestation-verify/0.1"})
@@ -242,7 +242,7 @@ def _default_did_web_get(url: str):
 
 def resolve_did_web(did: str, *, http_get=None) -> set[str]:
     """Fetch a did:web DID document and return the did:key set it authorises."""
-    fetch = http_get or _default_did_web_get
+    fetch = http_get or _default_http_get
     r = fetch(_did_web_https_url(did))
     r.raise_for_status()
     return keys_from_did_document(r.json())
@@ -447,7 +447,29 @@ def check_coverage(env, *, offline: bool) -> tuple[str, list[str]]:
         return ("fail" if modality == "MUST" else "warn"), notes + [f"coverage_uri unreachable: {exc}"]
 
 
-def check_standing(env, *, now: dt.datetime | None = None, offline: bool) -> tuple[str, list[str]]:
+def standing_grade(env) -> str | None:
+    """Grade the *strength* of an envelope's standing (§12.1): 'named' > 'venue' > 'self'.
+
+    Not every non-issuer contester is equally accountable. A keyed/DID principal
+    ('named') can itself be held to account; a platform-handle names a diffuse
+    *venue* ('venue', e.g. a public comment thread) with no single accountable key;
+    an issuer-only list is 'self' (a monument). None => no standing block. Mirrors
+    the §9 selection_grade idea: contestability is only as strong as the party you
+    can actually reach. Pure/offline — computed from `contestable_by`.
+    """
+    st = env.get("standing")
+    if not st:
+        return None
+    issuer_id = env["issuer"].get("id")
+    non_issuer = [c for c in st.get("contestable_by", []) if c.get("id") != issuer_id]
+    if not non_issuer:
+        return "self"
+    if any(isinstance(c.get("id_scheme"), str) and c["id_scheme"].startswith("did:") for c in non_issuer):
+        return "named"
+    return "venue"
+
+
+def check_standing(env, *, now: dt.datetime | None = None, offline: bool, http_get=None) -> tuple[str, list[str]]:
     """Contestability = standing (§12). Returns ('contestable'|'monument'|'n/a', notes).
 
     A signed conclusion that outlives the relation — and the party who could
@@ -457,6 +479,11 @@ def check_standing(env, *, now: dt.datetime | None = None, offline: bool) -> tup
     an expired `time_bounded` claim already rejects via `check_validity`; this check
     catches the cases validity passes clean — a `perpetual` claim with no contest
     channel, a lapsed contest window, or issuer-only ("self") contestability.
+
+    v0.1.9 adds a **grade** (see `standing_grade`) and a **contest-channel liveness**
+    check: a `contest_status_uri` that is declared but unreachable is surfaced as
+    degraded — a standing whose contest channel a verifier can't reach isn't really
+    contestable, only *claimed* so. `http_get` is injectable for tests.
     """
     now = now or dt.datetime.now(dt.timezone.utc)
     st = env.get("standing")
@@ -482,22 +509,44 @@ def check_standing(env, *, now: dt.datetime | None = None, offline: bool) -> tup
             "a signed conclusion no one can now contest"
         ]
 
-    notes = [f"contestable by {len(non_issuer)} non-issuer principal(s) until {st['contestable_until']}"]
-    status_uri = st.get("contest_status_uri")
-    if status_uri and offline:
-        notes.append("contest_status_uri fetch SKIPPED (offline)")
-    elif status_uri:
-        import requests
+    grade = standing_grade(env)
+    notes = [
+        f"contestable by {len(non_issuer)} non-issuer principal(s) until {st['contestable_until']}",
+        f"standing grade: {grade} (a keyed/DID principal is 'named'; a platform-handle class is 'venue'; "
+        "issuer-only is 'self' = monument)",
+    ]
 
+    # Contest-channel liveness (§12.2). A declared-but-unreachable channel is degraded:
+    # standing is *claimed*, not verifiable. Deep anchor proofs (e.g. an OTS→Bitcoin-anchored
+    # disclosure at contest_status_uri) are delegated to that anchor type's own verifier —
+    # this check confirms only that the channel resolves.
+    status_uri = st.get("contest_status_uri")
+    if not status_uri:
+        notes.append("liveness: no contest_status_uri — channel liveness UNDECLARED (a verifier can't confirm it's live)")
+    elif offline:
+        notes.append("liveness: contest_status_uri present; check SKIPPED (offline)")
+    else:
+        fetch = http_get
+        if fetch is None:
+            import requests
+
+            def fetch(u):
+                return requests.get(u, timeout=15, headers={"User-Agent": "attestation-verify/0.1"})
         try:
-            r = requests.get(status_uri, timeout=15, headers={"User-Agent": "attestation-verify/0.1"})
+            r = fetch(status_uri)
             r.raise_for_status()
-            state = (r.json() or {}).get("state", "unknown")
-            notes.append(f"contest state per contest_status_uri: {state}")
+            try:
+                state = (r.json() or {}).get("state", "resolved")
+            except Exception:
+                state = "resolved"
+            notes.append(f"liveness: contest channel LIVE (contest_status_uri resolved; state={state})")
             if state in ("open", "upheld"):
                 notes.append(f"a contest is {state} — material; consumer SHOULD weigh before relying")
         except Exception as exc:
-            notes.append(f"contest_status_uri unreachable: {exc}")
+            notes.append(
+                f"liveness: contest channel UNREACHABLE ({type(exc).__name__}) — standing is DECLARED but "
+                "not verifiable; treat as degraded"
+            )
     return "contestable", notes
 
 
@@ -540,7 +589,11 @@ def verify(env, *, offline: bool = False, now: dt.datetime | None = None) -> dic
         verdict["reasons"].append("coverage check failed (MUST claim type)")
 
     standing_state, standing_notes = check_standing(env, now=now, offline=offline)
-    verdict["checks"]["standing"] = {"state": standing_state, "notes": standing_notes}
+    verdict["checks"]["standing"] = {
+        "state": standing_state,
+        "grade": standing_grade(env),
+        "notes": standing_notes,
+    }
     verdict["monument"] = standing_state == "monument"
 
     verdict["accept"] = sig_ok and val_ok and ev_ok and cov_state != "fail"

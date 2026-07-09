@@ -37,6 +37,27 @@ Otherwise, with a live standing block naming a non-issuer principal inside an op
 
 Consumers relying on high-stakes attestations SHOULD treat `monument: true` as disqualifying per their own policy — the primitive is *never let a lapsed relation read as a standing fact*.
 
+## §12.1 — standing grade (v0.1.9)
+
+Not every non-issuer contester is equally accountable, so a `contestable` verdict also carries a **grade** (`standing_grade`, surfaced as `checks.standing.grade`), mirroring §9 `selection_grade` — *contestability is only as strong as the party you can actually reach*:
+
+- **`named`** — at least one non-issuer contester is a keyed / DID principal (`did:key`, `did:web`, …). It can itself be held to account (it has a key, an identity, a hearing you can demand of *it*).
+- **`venue`** — the contesters are only platform-handles: a diffuse *venue* (e.g. a public comment thread), contestable-in-principle but with no single accountable key.
+- **`self`** — `contestable_by` names only the issuer (already a monument).
+- **`null`** — no `standing` block.
+
+A `named` standing is strictly stronger than a `venue` one; a consumer MAY require `named` for high-stakes reliance. The grade is computed offline from `contestable_by`.
+
+## §12.2 — contest-channel liveness (v0.1.9)
+
+`standing` is a claim about a channel; a verifier should confirm the channel is *live*, not just *declared*. In full (online) mode the verifier resolves `contest_status_uri` and reports:
+
+- **live** — the channel resolves (and its `state`, e.g. `none`/`open`/`upheld`, is surfaced; an `open`/`upheld` contest is flagged as material).
+- **unreachable** — declared but does not resolve → **degraded**: the standing is *claimed*, not verifiable. Surfaced prominently (advisory, like the monument flag).
+- **undeclared** — no `contest_status_uri` at all → liveness can't be checked.
+
+Deep anchor proofs are **out of scope for this check by design**: if `contest_status_uri` points at an externally-anchored record (e.g. an OTS→Bitcoin-anchored disclosure that fixes *when* the standing was live), verifying that anchor is delegated to the anchor type's own verifier — this check confirms only that the channel resolves. That keeps the envelope verifier vendor-neutral while letting a standing be backed by a real external anchor. *(Worked end-to-end against a Bitcoin-anchored Touchstone disclosure — see the interop notes.)*
+
 ## Why `contestable_until` is not just another expiry
 
 `validity.not_after` says *when the claim stops being asserted.* `contestable_until` says *when the relation stops being re-holdable* — when the last party who could argue with it is no longer owed a hearing. Expiry here is not decay; it is the attestation admitting it was a relation that must be periodically re-held, not a fact that stands alone. A receipt that never lapses is not more permanent than one that does — it is abandoned, wearing a signature.
