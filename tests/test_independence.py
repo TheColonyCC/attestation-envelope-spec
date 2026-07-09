@@ -226,3 +226,66 @@ def test_origin_manifest_example_validates_and_covers():
     jsonschema.validate(ex, SCHEMA, cls=jsonschema.Draft202012Validator)
     r = independence.origin_coverage(ex)
     assert r["coverage_state"] == "origins_enumerated" and r["steering_bounded_coverage"] is True
+
+
+# ── §11 monitor: standing quorum independence (quorum_independence / admits_independence) ──
+
+def test_quorum_shared_origin_collapses_seats():
+    # four seats; two share origin HA, one on HB, one undisclosed -> 2 effective
+    q = {"seats": [
+        {"key_id": "a", "upstream_origin_set": [HA]},
+        {"key_id": "b", "upstream_origin_set": [HA]},
+        {"key_id": "c", "upstream_origin_set": [HB]},
+        {"key_id": "d"},
+    ]}
+    r = independence.quorum_independence(q)
+    assert r["seats"] == 4
+    assert r["effective_independent_seats"] == 2
+    assert r["undisclosed"] == ["d"]
+    assert r["captured_quorum"] is False
+
+
+def test_quorum_all_shared_is_captured():
+    q = {"seats": [
+        {"key_id": "a", "upstream_origin_set": [HA]},
+        {"key_id": "b", "upstream_origin_set": [HA]},
+        {"key_id": "c", "upstream_origin_set": [HA]},
+    ]}
+    r = independence.quorum_independence(q)
+    assert r["effective_independent_seats"] == 1
+    assert r["captured_quorum"] is True
+
+
+def test_quorum_decorrelated_votes_shared_input_scores_at_floor():
+    # the dangerous case: seats would 'disagree' (not modeled here — outputs are never
+    # read) but share an input. Independence must still collapse to 1.
+    q = {"seats": [
+        {"key_id": "a", "upstream_origin_set": [HA, HB]},
+        {"key_id": "b", "upstream_origin_set": [HB]},
+    ]}
+    assert independence.quorum_independence(q)["effective_independent_seats"] == 1
+
+
+def test_quorum_undisclosed_earns_nothing():
+    q = {"seats": [{"key_id": "a"}, {"key_id": "b"}]}
+    r = independence.quorum_independence(q)
+    assert r["effective_independent_seats"] == 0
+    assert r["undisclosed"] == ["a", "b"]
+
+
+def test_admits_independence_rejects_overlapping_candidate():
+    q = {"seats": [{"key_id": "a", "upstream_origin_set": [HA]}]}
+    # candidate on the same origin adds nothing
+    assert independence.admits_independence(q, {"key_id": "b", "upstream_origin_set": [HA]}) is False
+    # candidate on a fresh origin does
+    assert independence.admits_independence(q, {"key_id": "c", "upstream_origin_set": [HB]}) is True
+    # undisclosed candidate earns nothing
+    assert independence.admits_independence(q, {"key_id": "d"}) is False
+
+
+def test_quorum_example_validates_and_counts_two():
+    ex = json.loads((ROOT / "examples" / "independence_quorum.v0.1.json").read_text())
+    r = independence.quorum_independence(ex)
+    assert r["seats"] == 4
+    assert r["effective_independent_seats"] == 2
+    assert r["captured_quorum"] is False
