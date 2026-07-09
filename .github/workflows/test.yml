@@ -14,6 +14,9 @@ jobs:
       - run: python tools/verify.py examples/colony_post_published.v0.1.json --offline
       - run: python tools/verify.py examples/secp256k1_cosigned.v0.1.json --offline
       - run: python tools/build_secp256k1_example.py && git diff --exit-code examples/secp256k1_cosigned.v0.1.json
+      - run: python tools/verify.py examples/standing_contestable.v0.1.json --offline
+      - run: python tools/verify.py examples/monument_perpetual.v0.1.json --offline
+      - run: python tools/build_standing_examples.py && git diff --exit-code examples/standing_contestable.v0.1.json examples/monument_perpetual.v0.1.json
       - run: python tools/verify.py examples/independence_multiwitness.v0.1.json --offline
       - run: python tools/independence.py examples/independence_multiwitness.v0.1.json
       - run: python tools/independence.py examples/independence_selection.v0.1.json

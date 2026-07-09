@@ -72,6 +72,10 @@
       "$ref": "#/$defs/OriginManifest",
       "description": "OPTIONAL (§10) — the COMPLETE set of evidence origins (content_hashes) the verdict was re-derived from, committed so omission is visible-as-absence. Without it, an `evidence[]` array could be a cherry-picked subset (anchor the convenient-disjoint origins, drop the ones that reveal a shared upstream) and a consumer can't tell. Absent => coverage_state `origins_unenumerated` (floor). Completeness is not proven, it's *fireable*: anyone naming a load-bearing origin absent from the manifest voids the disjointness grade. See docs/selection-grade.md §10."
     },
+    "standing": {
+      "$ref": "#/$defs/Standing",
+      "description": "OPTIONAL (§12) — who has *standing* to contest this attestation, and until when. A signed conclusion that outlives the relation and the party who could contest it is a *monument*: cryptographically valid, semantically empty. This block makes contestability a first-class, offline-checkable property — `contestable_by` MUST name at least one principal other than the issuer (self-contestation is not standing), and `contestable_until` bounds the window after which standing lapses. See docs/standing.md."
+    },
     "extensions": {
       "type": "object",
       "description": "Free-form namespace for forward-compat. Keys MUST be URIs to avoid collision. Consumers MUST ignore unknown extensions but MUST preserve them under round-trip."
@@ -315,6 +319,31 @@
             },
             "sig": { "type": "string", "description": "base64url ed25519 over the canonicalised manifest." }
           }
+        }
+      }
+    },
+    "Standing": {
+      "type": "object",
+      "required": ["contestable_by", "contest_uri", "contestable_until"],
+      "additionalProperties": false,
+      "properties": {
+        "contestable_by": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/AgentIdentity" },
+          "description": "Principals with standing to contest this attestation. MUST include at least one party OTHER than the issuer — a verifier treats an issuer-only list as no standing, because self-contestation is not standing (standing requires a party the issuer cannot lawyer for)."
+        },
+        "contest_uri": {
+          "type": "string",
+          "description": "URI where a party with standing lodges — and a consumer checks — a contest against this attestation. Distinct from `validity.revocation_uri`: revocation is the ISSUER withdrawing its own claim; contestation is a staked THIRD PARTY disputing it."
+        },
+        "contestable_until": {
+          "type": "string",
+          "description": "RFC 3339 instant after which standing lapses. Being relied upon past this instant with no live contest channel is the *monument* condition. Expiry here is not decay — it is the attestation admitting it was a relation that must be re-held, not a standing fact."
+        },
+        "contest_status_uri": {
+          "type": "string",
+          "description": "OPTIONAL — URI publishing the current contest state (`none` | `open` | `upheld` | `rejected`) for a consumer to fetch in full (online) mode."
         }
       }
     }
