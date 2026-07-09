@@ -42,6 +42,9 @@ check is only worth what it costs the checked party to fake:
       checkpoint's `head_hash` (not some unrelated digest), and reports confirmed.
     * Checkpoint chain-linkage, when a chain of checkpoints is supplied.
     * Freshness arithmetic: provable_through vs. max_checkpoint_lag -> anchored|stale.
+    * Contest-channel control (Threat #6): whether the contest recorder is the same
+      recorder that anchors the attestation (issuer-controlled -> absence is self-
+      attested) vs. a distinct one. Surfaced as `contest_control`; offline-computable.
 
   DELEGATES (documented, not silently skipped):
     * OTS -> mainnet confirmation: that block H is CANONICAL Bitcoin (recompute the
@@ -334,13 +337,18 @@ def check_contest_leg(
 def check(env: dict, *, offline: bool, now: Optional[dt.datetime] = None, http_get: Optional[Callable] = None) -> dict:
     """Verify an envelope's externally-anchored standing (§12.3), if present.
 
-    Returns {state, lower_bound, provable_through, notes}. `state`:
+    Returns {state, lower_bound, provable_through, contest_control, notes}. `state`:
       'n/a'         — no `standing.anchor` block (nothing to verify here)
       'unsupported' — anchor present but unknown `profile`
       'unanchored'  — anchor present but the attestation leg gives no lower bound
       'anchored'    — attestation anchored AND (offline, or contest leg clear+fresh)
       'stale'       — attestation anchored, contest leg clear but past max lag
       'contested'   — a contest is anchored against this envelope
+
+    `contest_control` grades WHO controls the contest channel (Threat #6):
+      'issuer'               — contest recorder == attestation recorder; absence is self-attested
+      'independent-declared' — a distinct contest recorder (independent OPERATION not checkable here)
+      'undeclared'           — no contest channel
 
     Advisory. Never flips accept/reject.
     """
@@ -362,8 +370,39 @@ def check(env: dict, *, offline: bool, now: Optional[dt.datetime] = None, http_g
         return {"state": "unanchored", "lower_bound": None, "provable_through": None, "notes": notes}
 
     envelope_id = env.get("envelope_id") or env.get("id") or ""
+    contest = anchor.get("contest") or {}
+
+    # Threat #6 — issuer-controlled contest channel. The absence-of-contest read is
+    # only as trustworthy as the party that controls whether a contest CAN be
+    # recorded. If the contest recorder is the same recorder that anchors the
+    # attestation (issuer-side), absence is self-attested: the issuer can withhold
+    # a contest that was actually filed and the scan still comes back clean — the
+    # standing analogue of Threat #1 (self-signed evidence). Surface it; it is the
+    # `self` grade for the contest axis. Offline-computable (a recorder comparison);
+    # deeper "same operator/key under distinct ids" is a governance property, online.
+    att_recorder = att.get("recorder")
+    contest_recorder = contest.get("recorder")
+    if not contest_recorder:
+        contest_control = "undeclared"
+    elif att_recorder and contest_recorder == att_recorder:
+        contest_control = "issuer"
+        notes.append(
+            "contest_control: ISSUER — the contest recorder is the same recorder that anchors the "
+            "attestation, so absence-of-contest is SELF-ATTESTED: the issuer can withhold a filed "
+            "contest and the scan still reads clean (Threat #6; the `self` grade for contestability). "
+            "Real contestability needs a contest recorder operated by a staked non-issuer party."
+        )
+    else:
+        contest_control = "independent-declared"
+        notes.append(
+            "contest_control: independent-declared — the contest recorder differs from the "
+            "attestation recorder. That it is independently OPERATED (not the issuer under another "
+            "id/key) is a governance property, not checkable here; split-view resistance makes "
+            "retroactive deletion of a recorded contest detectable, not append-refusal (Threat #6)."
+        )
+
     cstate, provable_through, cnotes = check_contest_leg(
-        anchor.get("contest") or {}, envelope_id, offline=offline, now=now, http_get=http_get
+        contest, envelope_id, offline=offline, now=now, http_get=http_get
     )
     notes += cnotes
 
@@ -375,7 +414,13 @@ def check(env: dict, *, offline: bool, now: Optional[dt.datetime] = None, http_g
         # 'clear' (fresh), or offline/undeclared: the lower bound stands; the
         # upper bound is either fresh, or honestly unproven (said in notes).
         state = "anchored"
-    return {"state": state, "lower_bound": lower_bound, "provable_through": provable_through, "notes": notes}
+    return {
+        "state": state,
+        "lower_bound": lower_bound,
+        "provable_through": provable_through,
+        "contest_control": contest_control,
+        "notes": notes,
+    }
 
 
 def _default_http_get(url: str):  # pragma: no cover — network; injected in tests

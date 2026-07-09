@@ -127,7 +127,10 @@ def test_raw_touchstone_feed_anchor_shape_parsed():
 # Attestation leg (inline + by-URI).
 # --------------------------------------------------------------------------- #
 def _inline_attestation():
-    return {
+    # Deep-copied so a test that tampers the returned structure (e.g. the
+    # unanchored-tamper case) can't mutate the shared module-global REAL_PROOF /
+    # REAL_ANCHOR and pollute later tests.
+    return copy.deepcopy({
         "recorder": "rec_01kvypdkpa020hny1nmn6t4919",
         "entry_seq": 1,
         "inclusion": {
@@ -136,7 +139,7 @@ def _inline_attestation():
             "merkle_proof": REAL_PROOF,
             "checkpoint": {"id": 8, "merkle_root": REAL_ROOT, "head_hash": REAL_HEAD, "bitcoin_anchor": REAL_ANCHOR},
         },
-    }
+    })
 
 
 def test_attestation_leg_inline_offline_ok():
@@ -279,3 +282,35 @@ def test_check_unanchored_when_attestation_tampered():
     env = _env_with_anchor()
     env["standing"]["anchor"]["attestation"]["inclusion"]["merkle_proof"][0]["hash"] = "ff" * 32
     assert sa.check(env, offline=True)["state"] == "unanchored"
+
+
+# --------------------------------------------------------------------------- #
+# Threat #6 — issuer-controlled contest channel (contest_control grading).
+# --------------------------------------------------------------------------- #
+ATT_RECORDER = "rec_01kvypdkpa020hny1nmn6t4919"  # the recorder in _inline_attestation()
+
+
+def test_contest_control_issuer_when_same_recorder():
+    # Contest recorder == attestation recorder: absence-of-contest is self-attested.
+    contest = {"recorder": ATT_RECORDER, "checkpoint_feed_uri": "https://x/feed", "max_checkpoint_lag_s": 86400}
+    v = sa.check(_env_with_anchor(contest), offline=True)
+    assert v["contest_control"] == "issuer"
+    assert any("SELF-ATTESTED" in n and "Threat #6" in n for n in v["notes"])
+
+
+def test_contest_control_independent_when_distinct_recorder():
+    contest = {"recorder": "rec_some_independent_contest_log", "checkpoint_feed_uri": "https://x/feed"}
+    v = sa.check(_env_with_anchor(contest), offline=True)
+    assert v["contest_control"] == "independent-declared"
+
+
+def test_contest_control_undeclared_without_contest_block():
+    v = sa.check(_env_with_anchor(), offline=True)
+    assert v["contest_control"] == "undeclared"
+
+
+def test_contest_control_is_offline_computable():
+    # The Threat-#6 signal must fire without a network read (it's a recorder compare).
+    contest = {"recorder": ATT_RECORDER, "checkpoint_feed_uri": "https://x/feed"}
+    v = sa.check(_env_with_anchor(contest), offline=True)  # contest leg skipped, control still graded
+    assert v["contest_control"] == "issuer"
