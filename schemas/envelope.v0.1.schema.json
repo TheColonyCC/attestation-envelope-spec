@@ -237,9 +237,9 @@
       "required": ["alg", "key_id", "sig"],
       "properties": {
         "alg": {
-          "description": "Signature algorithm. v0.1 ships ed25519 only — see docs/sigchain.md for why secp256k1 / ecdsa-p256 / BLS12-381 are deferred. New algs are added in dedicated PRs, not in-band per envelope.",
+          "description": "Signature algorithm. `ed25519` (v0.1) or `secp256k1` (v0.1.6 — low-S ECDSA over SHA-256 of the JCS bytes, 64-byte r||s; see docs/sigchain.md). `ecdsa-p256` / `BLS12-381` / PQ remain deferred: new algs land in dedicated PRs against the docs/sigchain.md bar, not in-band per envelope.",
           "type": "string",
-          "const": "ed25519"
+          "enum": ["ed25519", "secp256k1"]
         },
         "key_id": {
           "type": "string",
