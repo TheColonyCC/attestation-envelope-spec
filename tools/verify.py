@@ -21,7 +21,8 @@ Usage:
     python tools/verify.py --offline path/to/envelope.json
     python tools/verify.py --json envelope.json     # machine-readable verdict
 
-Requires: jsonschema, pynacl, base58, requests (requests only for full mode).
+Requires: jsonschema, pynacl, base58, coincurve (secp256k1 sigchains),
+requests (requests only for full mode).
 """
 from __future__ import annotations
 
@@ -49,6 +50,10 @@ COVERAGE_MODALITY = {
 }
 
 ED25519_MULTICODEC = b"\xed\x01"
+SECP256K1_MULTICODEC = b"\xe7\x01"
+# Order of the secp256k1 group; low-S canonicalisation requires s <= n//2 (BIP-146).
+SECP256K1_N = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+SECP256K1_HALF_N = SECP256K1_N // 2
 
 
 # --------------------------------------------------------------------------- #
@@ -69,6 +74,10 @@ def jcs(obj) -> bytes:
 # --------------------------------------------------------------------------- #
 # Identity / key resolution
 # --------------------------------------------------------------------------- #
+def _b64url_decode(s: str) -> bytes:
+    return base64.urlsafe_b64decode(s + "=" * (-len(s) % 4))
+
+
 def did_key_to_pubkey(did: str) -> bytes:
     """Extract the raw 32-byte ed25519 public key from a did:key string."""
     import base58
@@ -82,6 +91,91 @@ def did_key_to_pubkey(did: str) -> bytes:
     if len(pub) != 32:
         raise ValueError(f"ed25519 pubkey must be 32 bytes, got {len(pub)}")
     return pub
+
+
+def did_key_to_secp256k1_pubkey(did: str) -> bytes:
+    """Extract the 33-byte *compressed* secp256k1 public key from a did:key string.
+
+    A secp256k1 sigchain entry MUST name its key as a `did:key` (multicodec
+    0xe701) so the verifier holds the public key: a non-recoverable 64-byte
+    r||s signature cannot be checked against an address-only identity. That is
+    the deliberate split — `did:pkh:eip155` names an on-chain issuer at the
+    *evidence* layer (verified on-chain), never as a sigchain co-signature. See
+    docs/sigchain.md.
+    """
+    import base58
+
+    if not did.startswith("did:key:z"):
+        raise ValueError(f"not a base58btc did:key: {did!r}")
+    decoded = base58.b58decode(did[len("did:key:") + 1 :])
+    if decoded[:2] != SECP256K1_MULTICODEC:
+        raise ValueError("did:key multicodec is not secp256k1 (0xe701)")
+    pub = decoded[2:]
+    if len(pub) != 33 or pub[0] not in (0x02, 0x03):
+        raise ValueError(
+            f"secp256k1 pubkey must be 33-byte compressed (0x02/0x03 prefix), got {len(pub)} bytes"
+        )
+    return pub
+
+
+def _verify_ed25519(entry: dict, message: bytes) -> tuple[bool, str]:
+    import nacl.exceptions
+    import nacl.signing
+
+    try:
+        pub = did_key_to_pubkey(entry["key_id"])
+    except ValueError as exc:
+        return False, f"key_id not a resolvable ed25519 did:key: {exc}"
+    try:
+        nacl.signing.VerifyKey(pub).verify(message, _b64url_decode(entry["sig"]))
+    except (nacl.exceptions.BadSignatureError, ValueError) as exc:
+        return False, f"signature does not verify ({type(exc).__name__})"
+    return True, "ok"
+
+
+def _verify_secp256k1(entry: dict, message: bytes) -> tuple[bool, str]:
+    """Low-S ECDSA over SHA-256 of the JCS bytes; 64-byte r||s encoding only.
+
+    Three defences make the acceptance bar (docs/sigchain.md) enforceable:
+      - the 65-byte `r||s||recovery` encoding is rejected outright, so EVM
+        toolchains can't pass eth_sign/EIP-191 output through by accident;
+      - high-S signatures (s > n/2) are rejected — malleability closed per BIP-146;
+      - the payload is `jcs(envelope|sigchain[0..i-1])`, identical to the ed25519
+        path (no EIP-712 domain-wrap), so there is one canonical signed payload.
+    """
+    import coincurve
+    from coincurve.ecdsa import cdata_to_der, deserialize_compact
+
+    try:
+        pub = did_key_to_secp256k1_pubkey(entry["key_id"])
+    except ValueError as exc:
+        return False, f"key_id not a resolvable secp256k1 did:key: {exc}"
+    try:
+        sig = _b64url_decode(entry["sig"])
+    except (ValueError, base64.binascii.Error) as exc:  # type: ignore[attr-defined]
+        return False, f"sig not valid base64url ({exc})"
+    if len(sig) == 65:
+        return False, (
+            "65-byte r||s||recovery encoding rejected — strip the trailing recovery "
+            "byte; raw EVM eth_sign/EIP-191 output is not accepted (docs/sigchain.md)"
+        )
+    if len(sig) != 64:
+        return False, f"secp256k1 signature must be 64-byte r||s, got {len(sig)} bytes"
+    r = int.from_bytes(sig[:32], "big")
+    s = int.from_bytes(sig[32:], "big")
+    if not (0 < r < SECP256K1_N):
+        return False, "invalid signature: r out of range"
+    if not (0 < s <= SECP256K1_HALF_N):
+        return False, "non-canonical signature: high-S (s > n/2) rejected — low-S required (BIP-146)"
+    try:
+        der = cdata_to_der(deserialize_compact(sig))
+        ok = coincurve.PublicKey(pub).verify(der, message)  # coincurve hashes with SHA-256
+    except Exception as exc:  # malformed pubkey / sig
+        return False, f"signature does not verify ({type(exc).__name__})"
+    return (ok, "ok" if ok else "signature does not verify")
+
+
+_SIG_VERIFIERS = {"ed25519": _verify_ed25519, "secp256k1": _verify_secp256k1}
 
 
 def key_resolves_to(key_id: str, issuer: dict) -> tuple[bool, str]:
@@ -113,29 +207,26 @@ def check_schema(env) -> list[str]:
 
 
 def check_sigchain(env) -> tuple[bool, list[str]]:
-    import nacl.exceptions
-    import nacl.signing
-
     notes: list[str] = []
     chain = env.get("sigchain") or []
     if not chain:
         return False, ["sigchain empty"]
     for i, entry in enumerate(chain):
-        if entry.get("alg") != "ed25519":
-            return False, [f"sigchain[{i}]: unsupported alg {entry.get('alg')!r} (v0.1 = ed25519 only)"]
+        alg = entry.get("alg")
+        verifier = _SIG_VERIFIERS.get(alg)
+        if verifier is None:
+            return False, [
+                f"sigchain[{i}]: unsupported alg {alg!r} (supported: {', '.join(sorted(_SIG_VERIFIERS))})"
+            ]
         stripped = copy.deepcopy(env)
         stripped["sigchain"] = chain[:i]
         message = jcs(stripped)
-        try:
-            pub = did_key_to_pubkey(entry["key_id"])
-        except ValueError as exc:
-            return False, [f"sigchain[{i}]: key_id not a resolvable ed25519 did:key: {exc}"]
-        try:
-            sig = base64.urlsafe_b64decode(entry["sig"] + "=" * (-len(entry["sig"]) % 4))
-            nacl.signing.VerifyKey(pub).verify(message, sig)
-        except (nacl.exceptions.BadSignatureError, ValueError) as exc:
-            return False, [f"sigchain[{i}]: signature does not verify ({type(exc).__name__})"]
-        notes.append(f"sigchain[{i}] ({entry.get('role','?')}) verified against {entry['key_id'][:24]}…")
+        ok, why = verifier(entry, message)
+        if not ok:
+            return False, [f"sigchain[{i}] ({alg}): {why}"]
+        notes.append(
+            f"sigchain[{i}] ({entry.get('role','?')}, {alg}) verified against {entry['key_id'][:24]}…"
+        )
     # role + identity binding on the issuer signature
     if chain[0].get("role") not in (None, "issuer"):
         return False, [f"sigchain[0].role must be 'issuer' or unset, got {chain[0].get('role')!r}"]

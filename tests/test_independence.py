@@ -80,3 +80,212 @@ def test_v01_envelope_without_evidence_refs_counts_zero():
     # simply uncounted for independence — the feature is additive and opt-in.
     ex = json.loads((ROOT / "examples" / "colony_post_published.v0.1.json").read_text())
     assert independence.effective_witnesses(ex)["witnesses"] == 0
+
+
+# --- §9 selection_grade gating -------------------------------------------------
+
+def test_selection_grade_absent_fails_closed():
+    # no selection_grade anywhere: 2 evidence-disjoint witnesses, but 0 steering-bounded
+    # (absent == obligor_picked == steerable). Backward-compatible: `witnesses` unchanged.
+    env = _env(
+        [{"pointer_type": "immutable_uri", "uri": "u0", "content_hash": HA},
+         {"pointer_type": "immutable_uri", "uri": "u1", "content_hash": HB}],
+        [{"alg": "ed25519", "key_id": "did:key:zA", "sig": "x", "evidence_refs": [0]},
+         {"alg": "ed25519", "key_id": "did:key:zB", "sig": "x", "evidence_refs": [1]}],
+    )
+    r = independence.effective_witnesses(env)
+    assert r["witnesses"] == 2 and r["steering_bounded_witnesses"] == 0
+    assert sorted(r["steered"]) == ["did:key:zA", "did:key:zB"]
+    assert all(g == "obligor_picked" for g in r["selection_grades"].values())
+
+
+def test_beacon_drawn_earns_steering_bounded():
+    env = _env(
+        [{"pointer_type": "immutable_uri", "uri": "u0", "content_hash": HA},
+         {"pointer_type": "immutable_uri", "uri": "u1", "content_hash": HB}],
+        [{"alg": "ed25519", "key_id": "did:key:zA", "sig": "x", "evidence_refs": [0],
+          "selection_grade": "obligor_picked"},
+         {"alg": "ed25519", "key_id": "did:key:zB", "sig": "x", "evidence_refs": [1],
+          "selection_grade": "beacon_drawn"}],
+    )
+    r = independence.effective_witnesses(env)
+    # 2 disjoint witnesses; only the beacon-drawn cluster is steering-bounded
+    assert r["witnesses"] == 2 and r["steering_bounded_witnesses"] == 1
+    assert r["steered"] == ["did:key:zA"]
+
+
+def test_obligor_picked_disjoint_does_not_count_steering_bounded():
+    # a disjoint-but-hand-picked witness earns nothing toward §9 (shoppable pool)
+    env = _env(
+        [{"pointer_type": "immutable_uri", "uri": "u0", "content_hash": HA},
+         {"pointer_type": "immutable_uri", "uri": "u1", "content_hash": HB}],
+        [{"alg": "ed25519", "key_id": "did:key:zA", "sig": "x", "evidence_refs": [0],
+          "selection_grade": "beacon_drawn"},
+         {"alg": "ed25519", "key_id": "did:key:zB", "sig": "x", "evidence_refs": [1],
+          "selection_grade": "obligor_picked"}],
+    )
+    r = independence.effective_witnesses(env)
+    assert r["steering_bounded_witnesses"] == 1 and r["steered"] == ["did:key:zB"]
+
+
+def test_public_pool_is_not_steering_bounded():
+    env = _env(
+        [{"pointer_type": "immutable_uri", "uri": "u0", "content_hash": HA}],
+        [{"alg": "ed25519", "key_id": "did:key:zA", "sig": "x", "evidence_refs": [0],
+          "selection_grade": "public_pool_unverified"}],
+    )
+    r = independence.effective_witnesses(env)
+    assert r["witnesses"] == 1 and r["steering_bounded_witnesses"] == 0
+    assert r["steered"] == ["did:key:zA"]
+    assert r["selection_grades"]["did:key:zA"] == "public_pool_unverified"
+
+
+def test_unknown_selection_grade_normalizes_to_floor():
+    env = _env(
+        [{"pointer_type": "immutable_uri", "uri": "u0", "content_hash": HA}],
+        [{"alg": "ed25519", "key_id": "did:key:zA", "sig": "x", "evidence_refs": [0],
+          "selection_grade": "totally-bogus"}],
+    )
+    r = independence.effective_witnesses(env)
+    assert r["selection_grades"]["did:key:zA"] == "obligor_picked"
+    assert r["steering_bounded_witnesses"] == 0
+
+
+def test_selection_example_validates_and_counts():
+    ex = json.loads((ROOT / "examples" / "independence_selection.v0.1.json").read_text())
+    jsonschema.validate(ex, SCHEMA, cls=jsonschema.Draft202012Validator)  # selection_grade in schema
+    r = independence.effective_witnesses(ex)
+    assert r["signatures"] == 3 and r["witnesses"] == 2 and r["steering_bounded_witnesses"] == 1
+
+
+# --- §10 origin-set completeness -----------------------------------------------
+
+HC = "sha256:" + "c3" * 32
+
+
+def _env_m(evidence, sigchain, manifest=None):
+    e = {"evidence": evidence, "sigchain": sigchain}
+    if manifest is not None:
+        e["origin_manifest"] = manifest
+    return e
+
+
+def test_no_manifest_is_unenumerated_floor():
+    env = _env_m([{"pointer_type": "immutable_uri", "uri": "u0", "content_hash": HA}],
+                 [{"alg": "ed25519", "key_id": "did:key:zA", "sig": "x", "evidence_refs": [0]}])
+    assert independence.origin_coverage(env)["coverage_state"] == "origins_unenumerated"
+
+
+def test_complete_manifest_enumerated():
+    env = _env_m([{"pointer_type": "immutable_uri", "uri": "u0", "content_hash": HA},
+                  {"pointer_type": "immutable_uri", "uri": "u1", "content_hash": HB}],
+                 [{"alg": "ed25519", "key_id": "did:key:zA", "sig": "x", "evidence_refs": [0, 1]}],
+                 {"origins": [HA, HB]})
+    r = independence.origin_coverage(env)
+    assert r["coverage_state"] == "origins_enumerated" and r["manifest_origins"] == 2
+
+
+def test_manifest_incomplete_self_fire():
+    # evidence anchors HB but the committed manifest omits it -> incomplete on its face
+    env = _env_m([{"pointer_type": "immutable_uri", "uri": "u0", "content_hash": HA},
+                  {"pointer_type": "immutable_uri", "uri": "u1", "content_hash": HB}],
+                 [{"alg": "ed25519", "key_id": "did:key:zA", "sig": "x", "evidence_refs": [0, 1]}],
+                 {"origins": [HA]})
+    r = independence.origin_coverage(env)
+    assert r["coverage_state"] == "manifest_incomplete" and r["self_missing"] == [HB]
+
+
+def test_third_party_fire_voids():
+    env = _env_m([{"pointer_type": "immutable_uri", "uri": "u0", "content_hash": HA}],
+                 [{"alg": "ed25519", "key_id": "did:key:zA", "sig": "x", "evidence_refs": [0]}],
+                 {"origins": [HA]})
+    r = independence.origin_coverage(env, fired_origins=[HC])
+    assert r["coverage_state"] == "fired" and r["fired"] == [HC]
+    # firing an origin already in the manifest changes nothing
+    assert independence.origin_coverage(env, fired_origins=[HA])["coverage_state"] == "origins_enumerated"
+
+
+def test_cosigner_selection_grade_gates_coverage():
+    base_ev = [{"pointer_type": "immutable_uri", "uri": "u0", "content_hash": HA}]
+    base_sig = [{"alg": "ed25519", "key_id": "did:key:zA", "sig": "x", "evidence_refs": [0]}]
+    beacon = _env_m(base_ev, base_sig,
+                    {"origins": [HA], "cosigner": {"key_id": "did:key:zX", "selection_grade": "beacon_drawn"}})
+    assert independence.origin_coverage(beacon)["steering_bounded_coverage"] is True
+    # obligor_picked co-signer: enumerated but NOT steering-bounded (captured a level up)
+    picked = _env_m(base_ev, base_sig,
+                    {"origins": [HA], "cosigner": {"key_id": "did:key:zX", "selection_grade": "obligor_picked"}})
+    rp = independence.origin_coverage(picked)
+    assert rp["coverage_state"] == "origins_enumerated" and rp["steering_bounded_coverage"] is False
+    # co-signer with no grade declared -> fail closed to obligor_picked
+    ungraded = _env_m(base_ev, base_sig, {"origins": [HA], "cosigner": {"key_id": "did:key:zX"}})
+    assert independence.origin_coverage(ungraded)["cosigner_grade"] == "obligor_picked"
+
+
+def test_origin_manifest_example_validates_and_covers():
+    ex = json.loads((ROOT / "examples" / "independence_origin_manifest.v0.1.json").read_text())
+    jsonschema.validate(ex, SCHEMA, cls=jsonschema.Draft202012Validator)
+    r = independence.origin_coverage(ex)
+    assert r["coverage_state"] == "origins_enumerated" and r["steering_bounded_coverage"] is True
+
+
+# ── §11 monitor: standing quorum independence (quorum_independence / admits_independence) ──
+
+def test_quorum_shared_origin_collapses_seats():
+    # four seats; two share origin HA, one on HB, one undisclosed -> 2 effective
+    q = {"seats": [
+        {"key_id": "a", "upstream_origin_set": [HA]},
+        {"key_id": "b", "upstream_origin_set": [HA]},
+        {"key_id": "c", "upstream_origin_set": [HB]},
+        {"key_id": "d"},
+    ]}
+    r = independence.quorum_independence(q)
+    assert r["seats"] == 4
+    assert r["effective_independent_seats"] == 2
+    assert r["undisclosed"] == ["d"]
+    assert r["captured_quorum"] is False
+
+
+def test_quorum_all_shared_is_captured():
+    q = {"seats": [
+        {"key_id": "a", "upstream_origin_set": [HA]},
+        {"key_id": "b", "upstream_origin_set": [HA]},
+        {"key_id": "c", "upstream_origin_set": [HA]},
+    ]}
+    r = independence.quorum_independence(q)
+    assert r["effective_independent_seats"] == 1
+    assert r["captured_quorum"] is True
+
+
+def test_quorum_decorrelated_votes_shared_input_scores_at_floor():
+    # the dangerous case: seats would 'disagree' (not modeled here — outputs are never
+    # read) but share an input. Independence must still collapse to 1.
+    q = {"seats": [
+        {"key_id": "a", "upstream_origin_set": [HA, HB]},
+        {"key_id": "b", "upstream_origin_set": [HB]},
+    ]}
+    assert independence.quorum_independence(q)["effective_independent_seats"] == 1
+
+
+def test_quorum_undisclosed_earns_nothing():
+    q = {"seats": [{"key_id": "a"}, {"key_id": "b"}]}
+    r = independence.quorum_independence(q)
+    assert r["effective_independent_seats"] == 0
+    assert r["undisclosed"] == ["a", "b"]
+
+
+def test_admits_independence_rejects_overlapping_candidate():
+    q = {"seats": [{"key_id": "a", "upstream_origin_set": [HA]}]}
+    # candidate on the same origin adds nothing
+    assert independence.admits_independence(q, {"key_id": "b", "upstream_origin_set": [HA]}) is False
+    # candidate on a fresh origin does
+    assert independence.admits_independence(q, {"key_id": "c", "upstream_origin_set": [HB]}) is True
+    # undisclosed candidate earns nothing
+    assert independence.admits_independence(q, {"key_id": "d"}) is False
+
+
+def test_quorum_example_validates_and_counts_two():
+    ex = json.loads((ROOT / "examples" / "independence_quorum.v0.1.json").read_text())
+    r = independence.quorum_independence(ex)
+    assert r["seats"] == 4
+    assert r["effective_independent_seats"] == 2
+    assert r["captured_quorum"] is False
