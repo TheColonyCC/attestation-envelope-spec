@@ -103,7 +103,56 @@ def main() -> None:
     (ROOT / "examples" / "monument_perpetual.v0.1.json").write_text(
         json.dumps(sign_envelope(monument, sk, did), indent=2) + "\n"
     )
-    print("wrote examples/standing_contestable.v0.1.json + examples/monument_perpetual.v0.1.json")
+
+    # 3) Bitcoin-anchored standing (§12.3) — the same live standing block, now
+    #    carrying a two-channel `anchor`. The inclusion proof is REAL: entry seq 1
+    #    of Touchstone recorder rec_01kvyp…, whose Merkle root is checkpoint 8,
+    #    committed to mainnet Bitcoin block 955295 via OpenTimestamps. (The issuer
+    #    key is still the throwaway test key; only the anchor data is real.) Offline
+    #    the verifier proves the lower bound (inclusion + anchor-commits-head) and
+    #    reports standing.anchor.state = "anchored"; the contest leg is an online read.
+    anchored = json.loads(json.dumps(contestable))  # deep copy of the contestable env
+    anchored["envelope_id"] = "019ee7b1-1aa0-7c02-9d31-3b2f0e5c7a03"
+    anchored["standing"]["anchor"] = {
+        "profile": "touchstone-bitcoin/1",
+        "attestation": {
+            "recorder": "rec_01kvypdkpa020hny1nmn6t4919",
+            "entry_seq": 1,
+            "inclusion_proof_uri": "https://touchstone.cv/.well-known/touchstone/checkpoints/rec_01kvypdkpa020hny1nmn6t4919/entry/1",
+            "inclusion": {
+                "leaf_hash": "c90c7117eb32cec64aa0880f7463a3a7b3c42cc7dec6139b77e00b796cf157a7",
+                "payload_hash": "d92c7ead4417c86a3c936c446a03d79e4d3d64e049f66ec4bf3f951f79789f00",
+                "merkle_proof": [
+                    {"hash": "bf02699620869b934fbdab23b2486abbdb81a5a89f8ea258d7343f1cbd7f0b1c", "side": "left"},
+                    {"hash": "153f9c35b1ea1597a723c46761855dbe831037ee15ac0368190cd66db03f2e83", "side": "right"},
+                    {"hash": "e713332a8ebf6c41fdd16a3beca74757d626274cc98e7c29318864456fa0d5bd", "side": "right"},
+                ],
+                "checkpoint": {
+                    "id": 8,
+                    "merkle_root": "e57c8b3ea9bd6d9dd8908534cf8f283cd97f22b3c52150acab4f894d433b2d44",
+                    "head_hash": "1ca233779944528eddba041cf25366d2ba795e93215a90881cdb966de5bc6986",
+                    "bitcoin_anchor": {
+                        "ots_digest": "1ca233779944528eddba041cf25366d2ba795e93215a90881cdb966de5bc6986",
+                        "height": 955295,
+                        "block_hash": "00000000000000000000f1eea649b0a5724a8646ef606e043e71c242cd903c33",
+                        "block_time": 1782370594,
+                        "status": "confirmed",
+                        "corroborated_by": ["blockstream", "mempool"],
+                    },
+                },
+            },
+        },
+        "contest": {
+            "recorder": "rec_01kvypdkpa020hny1nmn6t4919",
+            "checkpoint_feed_uri": "https://touchstone.cv/.well-known/touchstone/checkpoints/rec_01kvypdkpa020hny1nmn6t4919",
+            "max_checkpoint_lag_s": 86400,
+        },
+    }
+    (ROOT / "examples" / "standing_bitcoin_anchored.v0.1.json").write_text(
+        json.dumps(sign_envelope(anchored, sk, did), indent=2) + "\n"
+    )
+
+    print("wrote standing_contestable + monument_perpetual + standing_bitcoin_anchored (.v0.1.json)")
     print(f"issuer {did}")
 
 

@@ -381,6 +381,83 @@
         "contest_status_uri": {
           "type": "string",
           "description": "OPTIONAL — URI publishing the current contest state (`none` | `open` | `upheld` | `rejected`) for a consumer to fetch in full (online) mode."
+        },
+        "anchor": {
+          "type": "object",
+          "description": "OPTIONAL (§12.3) — externally-anchored standing: upgrades declared contestability to a JOINT READ over two OpenTimestamps->Bitcoin-anchored channels. The `attestation` leg proves the entry's Merkle inclusion in an anchored checkpoint (a LOWER bound: existed no later than a Bitcoin block time, non-backdatable); the `contest` leg proves no contest is anchored up to the latest contest checkpoint (the UPPER bound `standing` actually claims), with staleness bounded by `max_checkpoint_lag_s`. Verified by tools/standing_anchor.py; advisory (never flips accept/reject). Shape folds Touchstone's hash-only inclusion-proof endpoint.",
+          "required": ["profile", "attestation"],
+          "additionalProperties": false,
+          "properties": {
+            "profile": {
+              "const": "touchstone-bitcoin/1",
+              "description": "Anchor scheme. The reference verifier folds `touchstone-bitcoin/1`: domain-separated SHA-256 Merkle inclusion + an OTS->Bitcoin-anchored checkpoint whose OTS digest equals its head_hash."
+            },
+            "attestation": {
+              "type": "object",
+              "description": "Lower-bound channel. Supply an inline `inclusion` proof (offline-verifiable) OR an `inclusion_proof_uri` to fetch it (online).",
+              "required": ["recorder", "entry_seq"],
+              "additionalProperties": false,
+              "properties": {
+                "recorder": { "type": "string", "description": "Recorder id of the append-only log holding the attestation entry." },
+                "entry_seq": { "type": "integer", "minimum": 0, "description": "Sequence number of the attestation entry in that recorder." },
+                "inclusion_proof_uri": { "type": "string", "description": "OPTIONAL — URI serving the inline `inclusion` object. Hash-only: reveals payload_hash + inclusion_proof + checkpoint, never the attestation body." },
+                "inclusion": {
+                  "type": "object",
+                  "description": "OPTIONAL inline inclusion proof — makes the lower bound offline-verifiable.",
+                  "required": ["leaf_hash", "merkle_proof", "checkpoint"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "leaf_hash": { "type": "string", "description": "The Merkle leaf pre-image (the entry_hash — a hash, not the payload)." },
+                    "payload_hash": { "type": "string", "description": "Hash of the attested payload, cross-referencing the attested content." },
+                    "merkle_proof": {
+                      "type": "array",
+                      "description": "Audit path from leaf to checkpoint root; each step names the sibling hash and which side it sits on.",
+                      "items": {
+                        "type": "object",
+                        "required": ["hash", "side"],
+                        "additionalProperties": false,
+                        "properties": { "hash": { "type": "string" }, "side": { "enum": ["left", "right"] } }
+                      }
+                    },
+                    "checkpoint": {
+                      "type": "object",
+                      "description": "The checkpoint whose merkle_root the entry is proven into, plus its Bitcoin anchor.",
+                      "required": ["merkle_root"],
+                      "properties": {
+                        "id": { "type": ["integer", "string"] },
+                        "merkle_root": { "type": "string" },
+                        "head_hash": { "type": "string" },
+                        "bitcoin_anchor": {
+                          "type": "object",
+                          "description": "The checkpoint's OTS->Bitcoin anchor. `ots_digest` MUST equal `head_hash` (else the anchor is for a different digest). Mainnet confirmation is delegated (SPV/verify_anchor).",
+                          "properties": {
+                            "ots_digest": { "type": "string" },
+                            "height": { "type": "integer" },
+                            "block_hash": { "type": "string" },
+                            "block_time": { "type": "integer" },
+                            "status": { "type": "string" },
+                            "corroborated_by": { "type": "array", "items": { "type": "string" } },
+                            "complete_proof_b64": { "type": "string" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "contest": {
+              "type": "object",
+              "description": "Upper-bound channel: the anchored contest recorder against which absence-of-contest is checked. Absence is provable only up to that recorder's latest anchored checkpoint — never to `now`.",
+              "required": ["recorder", "checkpoint_feed_uri"],
+              "additionalProperties": false,
+              "properties": {
+                "recorder": { "type": "string" },
+                "checkpoint_feed_uri": { "type": "string", "description": "URI of the contest recorder's Bitcoin-anchored checkpoint feed." },
+                "max_checkpoint_lag_s": { "type": "integer", "minimum": 0, "description": "Issuer-committed max staleness (seconds). If the latest anchored contest checkpoint is older than this, a verifier reads standing as STALE (not INVALID) — the honest expression of the checkpoint-cadence blind window." }
+              }
+            }
+          }
         }
       }
     }
