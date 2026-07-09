@@ -17,6 +17,7 @@ jobs:
       - run: python tools/verify.py examples/standing_contestable.v0.1.json --offline
       - run: python tools/verify.py examples/monument_perpetual.v0.1.json --offline
       - run: python tools/build_standing_examples.py && git diff --exit-code examples/standing_contestable.v0.1.json examples/monument_perpetual.v0.1.json
+      - run: python tools/verify.py examples/interop_colony_post_e17840cc.v0.1.json --offline   # online round-trip in docs/pilot-interop-v017.md
       - run: python tools/verify.py examples/independence_multiwitness.v0.1.json --offline
       - run: python tools/independence.py examples/independence_multiwitness.v0.1.json
       - run: python tools/independence.py examples/independence_selection.v0.1.json
