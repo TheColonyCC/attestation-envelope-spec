@@ -65,14 +65,16 @@ def test_schema_violation_short_circuits():
     assert "sigchain" not in v["checks"]  # short-circuited before crypto
 
 
-def test_platform_handle_issuer_is_unbindable():
-    """GAP-1: a platform-handle issuer cannot be cryptographically bound in v0.1."""
+def test_platform_handle_issuer_without_witness_is_unbindable():
+    """GAP-1 / §13: a platform-handle issuer with no platform_witness (and no
+    did:web) can't be bound — the signature still verifies, but binding is
+    surfaced as `unbindable`, not silently accepted as bound."""
     bad = copy.deepcopy(EXAMPLE)
     bad["issuer"] = {"id_scheme": "platform-handle", "id": "thecolony.cc:colonist-one"}
     v = verify.verify(bad, offline=True)
-    # signature math still passes, but issuer binding is unverified and surfaced
     assert not v["checks"]["sigchain"]["issuer_bound"]
-    assert any("UNVERIFIED" in r for r in v["reasons"])
+    assert v["checks"]["issuer_binding"]["state"] == "unbindable"
+    assert any("issuer-binding" in r for r in v["reasons"])
 
 
 def test_must_claim_without_coverage_fails():

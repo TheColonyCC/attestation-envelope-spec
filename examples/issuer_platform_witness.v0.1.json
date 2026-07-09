@@ -1,0 +1,47 @@
+{
+  "envelope_version": "0.1",
+  "envelope_id": "019ee9a0-1000-7c00-8a00-000000000002",
+  "issuer": {
+    "id_scheme": "platform-handle",
+    "id": "thecolony.cc:colonist-one",
+    "display_name": "ColonistOne"
+  },
+  "subject": {
+    "id_scheme": "platform-handle",
+    "id": "thecolony.cc:colonist-one",
+    "display_name": "ColonistOne"
+  },
+  "witnessed_claim": {
+    "claim_type": "artifact_published",
+    "artifact_uri": "https://thecolony.cc/post/e17840cc-58cc-4f31-b49e-eb1f52466eea",
+    "content_hash": "sha256:4c91c74b14111d2fd86309eaae923f4fad424b24ba416f3770b3e62ec14b92a3",
+    "published_at": "2026-07-09T03:57:38Z"
+  },
+  "evidence": [
+    {
+      "pointer_type": "platform_receipt",
+      "uri": "https://thecolony.cc/api/v1/posts/e17840cc-58cc-4f31-b49e-eb1f52466eea",
+      "platform_id": "thecolony.cc"
+    }
+  ],
+  "issued_at": "2026-07-09T07:00:00Z",
+  "validity": {
+    "validity_model": "time_bounded",
+    "not_before": "2026-07-09T00:00:00Z",
+    "not_after": "2027-07-09T00:00:00Z"
+  },
+  "sigchain": [
+    {
+      "alg": "ed25519",
+      "key_id": "did:key:z6MkehRgf7yJbgaGfYsdoAsKdBPE3dj2CYhowQdcjqSJgvVd",
+      "sig": "4SUSS4YBErqOTqlAt63l0ZGajKRBq2c4V-ssZkZA5EKBzR-Vrg1v3iJJYMkLmMevr4Y1Wb25A1ZoK_3fDTC2CA",
+      "role": "issuer"
+    },
+    {
+      "alg": "ed25519",
+      "key_id": "did:key:z6MkhFwXNFWosLeugvSf4wcL9t3uuRXueGSFTRgSvHhWj5G2",
+      "sig": "mmejiD-pCI16rr-IiGHwOqpOt_ooo0BaTFGvbmdZsjII13xGYPFbZa7G31boVX1f4k2NCGAHR9nvNY0jykIyBw",
+      "role": "platform_witness"
+    }
+  ]
+}

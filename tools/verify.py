@@ -199,6 +199,123 @@ def key_resolves_to(key_id: str, issuer: dict) -> tuple[bool, str]:
 
 
 # --------------------------------------------------------------------------- #
+# Issuer→identity binding (§13, closes GAP-1)
+# --------------------------------------------------------------------------- #
+def _did_web_https_url(did: str) -> str:
+    """did:web:host[:path...] -> the HTTPS URL of its DID document (W3C did:web)."""
+    if not did.startswith("did:web:"):
+        raise ValueError(f"not a did:web: {did!r}")
+    parts = [p.replace("%3A", ":") for p in did[len("did:web:") :].split(":")]
+    host = parts[0]
+    if len(parts) == 1:
+        return f"https://{host}/.well-known/did.json"
+    return f"https://{host}/{'/'.join(parts[1:])}/did.json"
+
+
+def keys_from_did_document(doc: dict) -> set[str]:
+    """The set of `did:key` identifiers a DID document authorises to sign.
+
+    Reads `verificationMethod[*]`: a `publicKeyMultibase` becomes `did:key:<mb>`
+    (a did:key IS that multibase), and an `id`/`publicKeyDidKey` already in did:key
+    form is taken as-is. Other key encodings are ignored — a verifier only binds
+    what it can turn into a did:key it already checks signatures against.
+    """
+    keys: set[str] = set()
+    for vm in doc.get("verificationMethod", []) or []:
+        if not isinstance(vm, dict):
+            continue
+        mb = vm.get("publicKeyMultibase")
+        if isinstance(mb, str) and mb.startswith("z"):
+            keys.add("did:key:" + mb)
+        for field in ("id", "publicKeyDidKey"):
+            v = vm.get(field)
+            if isinstance(v, str) and v.startswith("did:key:z"):
+                keys.add(v.split("#", 1)[0])
+    return keys
+
+
+def _default_did_web_get(url: str):
+    import requests
+
+    return requests.get(url, timeout=15, headers={"User-Agent": "attestation-verify/0.1"})
+
+
+def resolve_did_web(did: str, *, http_get=None) -> set[str]:
+    """Fetch a did:web DID document and return the did:key set it authorises."""
+    fetch = http_get or _default_did_web_get
+    r = fetch(_did_web_https_url(did))
+    r.raise_for_status()
+    return keys_from_did_document(r.json())
+
+
+def check_issuer_binding(env, *, offline: bool, resolve_did=None) -> tuple[str, list[str]]:
+    """Bind the issuer's signing key to the issuer *identity* (§13, GAP-1).
+
+    Returns (state, notes), state in {'bound','unverified','unbindable'}. Advisory
+    — as in v0.1, a failure to bind is surfaced, not a hard reject. `resolve_did`
+    maps a did:web DID to its authorised did:key set (injected in tests; defaults
+    to a live fetch). Offline mode skips every network resolution.
+
+    Mechanisms (both were the GAP-1 proposals in docs/pilot-colony-moltbook.md):
+      - did:key issuer  — key_id IS the identity (self-resolving; offline).
+      - did:web issuer  — sigchain[0].key_id must be authorised by the DID document
+                          the issuer's own domain publishes.
+      - platform-handle — a `platform_witness` co-signer whose key is authorised by
+                          the DID document of the SAME domain (`did:web:<domain>`)
+                          vouches that this issuer key speaks for the handle. The
+                          binding lives in the envelope; the trust root is the domain.
+    """
+    resolve_did = resolve_did or resolve_did_web
+    issuer = env["issuer"]
+    scheme = issuer.get("id_scheme")
+    chain = env.get("sigchain") or []
+    if not chain:
+        return "unbindable", ["no sigchain to bind an issuer key from"]
+    issuer_key = chain[0]["key_id"]
+
+    if scheme == "did:key":
+        ok, why = key_resolves_to(issuer_key, issuer)
+        return ("bound" if ok else "unbindable"), [why]
+
+    if scheme == "did:web":
+        if offline:
+            return "unverified", ["did:web issuer: DID-document resolution SKIPPED (offline)"]
+        try:
+            authorised = resolve_did(issuer["id"])
+        except Exception as exc:
+            return "unverified", [f"did:web issuer: DID document unresolvable ({exc})"]
+        if issuer_key in authorised:
+            return "bound", [f"did:web issuer: signing key authorised by {issuer['id']} DID document"]
+        return "unverified", [f"did:web issuer: signing key {issuer_key!r} NOT in the DID document"]
+
+    if scheme == "platform-handle":
+        domain = str(issuer.get("id", "")).split(":", 1)[0]
+        witnesses = [e for e in chain if e.get("role") == "platform_witness"]
+        if not witnesses:
+            return "unbindable", [
+                f"platform-handle issuer {issuer.get('id')!r}: no platform_witness co-signature and "
+                "no did:web — key cannot be bound to the handle (GAP-1)"
+            ]
+        if offline:
+            return "unverified", ["platform_witness present; domain DID-document resolution SKIPPED (offline)"]
+        try:
+            domain_keys = resolve_did(f"did:web:{domain}")
+        except Exception as exc:
+            return "unverified", [f"platform_witness: domain DID document (did:web:{domain}) unresolvable ({exc})"]
+        for w in witnesses:
+            if w.get("key_id") in domain_keys:
+                return "bound", [
+                    f"bound via platform_witness: {domain} (did:web) authorises the witness key, which "
+                    f"co-signed this envelope binding {issuer_key} to {issuer['id']!r}"
+                ]
+        return "unverified", [
+            f"platform_witness key(s) not authorised by did:web:{domain} — the witness is not the domain"
+        ]
+
+    return "unbindable", [f"id_scheme={scheme!r}: no binding mechanism (GAP-1)"]
+
+
+# --------------------------------------------------------------------------- #
 # Individual checks
 # --------------------------------------------------------------------------- #
 def check_schema(env) -> list[str]:
@@ -227,12 +344,10 @@ def check_sigchain(env) -> tuple[bool, list[str]]:
         notes.append(
             f"sigchain[{i}] ({entry.get('role','?')}, {alg}) verified against {entry['key_id'][:24]}…"
         )
-    # role + identity binding on the issuer signature
+    # role check on the issuer signature; identity binding is a separate check (§13).
     if chain[0].get("role") not in (None, "issuer"):
         return False, [f"sigchain[0].role must be 'issuer' or unset, got {chain[0].get('role')!r}"]
-    bound, why = key_resolves_to(chain[0]["key_id"], env["issuer"])
-    notes.append(("issuer-binding OK: " if bound else "issuer-binding UNVERIFIED: ") + why)
-    return True, notes  # signature math passed; binding result is surfaced in notes (see verdict)
+    return True, notes
 
 
 def check_validity(env, *, now: dt.datetime | None = None, offline: bool) -> tuple[bool, list[str]]:
@@ -399,8 +514,13 @@ def verify(env, *, offline: bool = False, now: dt.datetime | None = None) -> dic
         return verdict  # everything else assumes a well-formed envelope
 
     sig_ok, sig_notes = check_sigchain(env)
-    issuer_bound = any(n.startswith("issuer-binding OK") for n in sig_notes)
+    if sig_ok:
+        bind_state, bind_notes = check_issuer_binding(env, offline=offline)
+    else:
+        bind_state, bind_notes = "unbindable", ["sigchain did not verify — binding is moot"]
+    issuer_bound = bind_state == "bound"
     verdict["checks"]["sigchain"] = {"ok": sig_ok, "issuer_bound": issuer_bound, "notes": sig_notes}
+    verdict["checks"]["issuer_binding"] = {"state": bind_state, "notes": bind_notes}
     if not sig_ok:
         verdict["reasons"].append("sigchain failed")
 
@@ -428,7 +548,7 @@ def verify(env, *, offline: bool = False, now: dt.datetime | None = None) -> dic
     # platform-handle issuers by design); it's surfaced so consumers can apply
     # their own policy. did:key issuers do bind.
     if not issuer_bound:
-        verdict["reasons"].append("issuer-binding UNVERIFIED (advisory; see GAP-1)")
+        verdict["reasons"].append(f"issuer-binding {bind_state} (advisory; see docs/binding.md / GAP-1)")
     # Monument detection (§12) is advisory too: an accepted envelope can still be
     # a monument (a conclusion no live party can contest). Surfaced, not rejected.
     if verdict["monument"]:
