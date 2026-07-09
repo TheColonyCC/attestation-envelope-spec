@@ -19,3 +19,6 @@ jobs:
       - run: python tools/independence.py examples/independence_selection.v0.1.json
       - run: python tools/independence.py examples/independence_origin_manifest.v0.1.json
       - run: python tools/independence.py examples/independence_quorum.v0.1.json
+      - run: python tools/build_lineage_example.py
+      - run: python tools/verify_lineage.py examples/lineage_twogen.v0.1.json
+      - run: python tools/verify_lineage.py examples/progenly_lineage_embervane.v0.1.json
