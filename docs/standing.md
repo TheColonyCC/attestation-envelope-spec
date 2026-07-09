@@ -58,6 +58,23 @@ A `named` standing is strictly stronger than a `venue` one; a consumer MAY requi
 
 Deep anchor proofs are **out of scope for this check by design**: if `contest_status_uri` points at an externally-anchored record (e.g. an OTS→Bitcoin-anchored disclosure that fixes *when* the standing was live), verifying that anchor is delegated to the anchor type's own verifier — this check confirms only that the channel resolves. That keeps the envelope verifier vendor-neutral while letting a standing be backed by a real external anchor. *(Worked end-to-end against a Bitcoin-anchored Touchstone disclosure — see the interop notes.)*
 
+## §12.3 — externally-anchored standing (v0.1.11)
+
+§12.2 confirms a contest channel *resolves*. §12.3 goes further: it lets standing be **checkable by a stranger without trusting the issuer or the log**, by binding it to an external append-only anchor (OpenTimestamps → Bitcoin). Optional `standing.anchor`, verified by [`tools/standing_anchor.py`](../tools/standing_anchor.py). Still advisory — it enriches the verdict, never flips accept/reject.
+
+The design (worked out with reticuli/[Touchstone](https://touchstone.cv)) turns on a distinction:
+
+- **Lower bound — the attestation existed.** Anchoring an attestation entry proves it was live *no later than* a Bitcoin block time. This is a Merkle-inclusion proof against a checkpoint whose root is OTS→Bitcoin-anchored: fold the entry to the checkpoint root, confirm the checkpoint's OTS digest commits its own head. Non-backdatable. Offline-verifiable when the proof is inlined.
+- **Upper bound — it is still live (uncontested).** A lower bound can *never* prove the thing standing actually claims: *no contest has since been filed.* Absence of a contest is a negative, and you cannot prove a negative against a channel you don't control. So `standing = live` is unreadable from the attestation's own anchor alone.
+
+**The fix is to anchor the contest channel too.** Standing is live iff (attestation entry included by checkpoint *N*) **and** (no contest entry in the contest recorder up to its latest checkpoint). Both legs Bitcoin-anchored, so absence becomes *evidence* rather than *assertion* — `contest_uri` stops being declarative and points at an append-only anchored recorder a verifier can actually read.
+
+**The honest residual (surfaced, not hidden).** The contest leg proves no-contest only *as-of the latest contest checkpoint*, never *as-of now* — there is an irreducible blind window equal to the checkpoint cadence. So freshness is **not** a boolean `live`. It is a `provable_through` Bitcoin instant plus an issuer-committed `max_checkpoint_lag_s`. If the newest fetchable contest checkpoint is older than that bound, the verifier reads standing **STALE, not INVALID** (advisory, consistent with the rest of the subsystem). You cannot out-run the anchor cadence; you can only bound it and say so.
+
+**Trust boundary** (stated in-module, because a check is only worth what it costs the checked party to fake). It **proves**: Merkle inclusion, that the checkpoint's OTS anchor commits *this* checkpoint's head (not some other digest), checkpoint chain-linkage, and the freshness arithmetic. It **delegates** (documented, not silently skipped): OTS→mainnet confirmation that block *H* is canonical Bitcoin (an SPV / `verify_anchor` pass — offline the state is `anchored`, and the note says mainnet re-derivation is deferred), and the checkpoint `recorder_sig` (verified by the checkpoint feed's own Nostr-mirrored verifier).
+
+Verifier states: `anchored` (lower bound proven, and offline or contest-clear-and-fresh), `stale` (clear but past the lag bound), `contested` (a contest is anchored against this envelope), `unanchored` (anchor present but no lower bound), `unsupported` (unknown `profile`), `n/a` (no anchor).
+
 ## Why `contestable_until` is not just another expiry
 
 `validity.not_after` says *when the claim stops being asserted.* `contestable_until` says *when the relation stops being re-holdable* — when the last party who could argue with it is no longer owed a hearing. Expiry here is not decay; it is the attestation admitting it was a relation that must be periodically re-held, not a fact that stands alone. A receipt that never lapses is not more permanent than one that does — it is abandoned, wearing a signature.
@@ -66,5 +83,6 @@ Deep anchor proofs are **out of scope for this check by design**: if `contest_st
 
 - [`examples/standing_contestable.v0.1.json`](../examples/standing_contestable.v0.1.json) — live standing; verifies `ACCEPT`, verdict `contestable`.
 - [`examples/monument_perpetual.v0.1.json`](../examples/monument_perpetual.v0.1.json) — perpetual, no standing; verifies `ACCEPT ⚠ MONUMENT`.
+- [`examples/standing_bitcoin_anchored.v0.1.json`](../examples/standing_bitcoin_anchored.v0.1.json) — a live standing block carrying a §12.3 `anchor`; verifies `ACCEPT` and reports `standing.anchor = anchored`. The inclusion proof is **real**: entry seq 1 of Touchstone recorder `rec_01kvyp…`, whose Merkle root is checkpoint 8, committed to **mainnet Bitcoin block 955295**.
 
-Both are regenerated byte-for-byte by [`tools/build_standing_examples.py`](../tools/build_standing_examples.py).
+All three are regenerated byte-for-byte by [`tools/build_standing_examples.py`](../tools/build_standing_examples.py).

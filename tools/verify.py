@@ -36,6 +36,8 @@ import pathlib
 
 import jsonschema
 
+import standing_anchor  # §12.3 externally-anchored standing (two-channel Bitcoin read)
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCHEMA = json.loads((ROOT / "schemas" / "envelope.v0.1.schema.json").read_text())
 
@@ -548,7 +550,7 @@ def check_standing(env, *, now: dt.datetime | None = None, offline: bool, http_g
 # --------------------------------------------------------------------------- #
 # Top-level
 # --------------------------------------------------------------------------- #
-def verify(env, *, offline: bool = False, now: dt.datetime | None = None) -> dict:
+def verify(env, *, offline: bool = False, now: dt.datetime | None = None, http_get=None) -> dict:
     verdict = {"accept": False, "checks": {}, "reasons": []}
 
     schema_errors = check_schema(env)
@@ -583,13 +585,22 @@ def verify(env, *, offline: bool = False, now: dt.datetime | None = None) -> dic
     if cov_state == "fail":
         verdict["reasons"].append("coverage check failed (MUST claim type)")
 
-    standing_state, standing_notes = check_standing(env, now=now, offline=offline)
+    standing_state, standing_notes = check_standing(env, now=now, offline=offline, http_get=http_get)
     verdict["checks"]["standing"] = {
         "state": standing_state,
         "grade": standing_grade(env),
         "notes": standing_notes,
     }
     verdict["monument"] = standing_state == "monument"
+
+    # §12.3 — externally-anchored standing (advisory enrichment). When the standing
+    # block carries an `anchor`, verify the two-channel Bitcoin read: the attestation's
+    # Merkle inclusion in an OTS->Bitcoin-anchored checkpoint (lower bound, offline-
+    # verifiable when inlined) and — online — the contest channel's freshness. Surfaced
+    # under standing.anchor; does not flip accept/reject.
+    anchor_result = standing_anchor.check(env, offline=offline, now=now, http_get=http_get)
+    if anchor_result["state"] != "n/a":
+        verdict["checks"]["standing"]["anchor"] = anchor_result
 
     verdict["accept"] = sig_ok and val_ok and ev_ok and cov_state != "fail"
     # The issuer-binding gap is NOT a hard reject in v0.1 (it's UNBINDABLE for
@@ -614,6 +625,11 @@ def _render(verdict: dict) -> str:
         lines.append(f"  [{head}] {name}")
         for n in c["notes"]:
             lines.append(f"        - {n}")
+        anchor = c.get("anchor")  # §12.3 externally-anchored standing sub-result
+        if anchor:
+            lines.append(f"        [{anchor['state']}] standing.anchor")
+            for n in anchor["notes"]:
+                lines.append(f"              - {n}")
     if verdict["reasons"]:
         lines.append("  reasons: " + "; ".join(verdict["reasons"]))
     return "\n".join(lines)
