@@ -189,6 +189,106 @@ def origin_coverage(envelope: dict, fired_origins=None) -> dict:
     }
 
 
+def quorum_independence(quorum: dict) -> dict:
+    """§11 monitor — effective-independent SEATS over a quorum, priced on shared
+    *derivation origins*, not vote outcomes.
+
+    §7–9 grade disjointness at co-sign time — that is the GRADE. But a quorum that is
+    disjoint once still converges: seats drift onto a shared source, read each other,
+    inherit one model's blind spot. So a consumer relying on a group's standing
+    agreement needs the MONITOR — a recompute of how independent the group actually is
+    *now*. This is that recompute.
+
+    Each seat declares an ``upstream_origin_set``: the ``content_hash`` values of the
+    inputs it derived its position from. A peer seat's output, when read before the seat
+    posts, IS such an origin (its content hash), so "I read exori's thread first" shows
+    up as a shared origin rather than as invisible correlation. Union-find the seats by
+    shared origin — same origin ⇒ same effective seat — exactly the §8 rule, moved from
+    the signed *evidence* to the *derivation* inputs.
+
+    Two disciplines make it un-gameable, both inherited from §8/§9:
+
+    - **Reads provenance, never outputs.** Decorrelated votes over shared inputs is the
+      dangerous, under-penalized case: every output-/agreement-based independence metric
+      scores it clean. This one scores it at floor, because it never looks at the votes —
+      only at what each seat derived from. You cannot decorrelate your way out of a shared
+      origin.
+    - **Undisclosed provenance earns nothing.** A seat with no usable ``upstream_origin_set``
+      cannot manufacture independence from an unverifiable label; it is assumed correlated
+      (fail-closed, as an unrefed signer earns nothing in §8) and contributes no effective
+      seat. Disclosure is the price of counting toward independence.
+
+    Returns ``{"seats": int, "effective_independent_seats": int, "undisclosed": [key_id…],
+    "clusters": [[content_hash…]…], "captured_quorum": bool}``. ``captured_quorum`` is the
+    alarm: ≥2 seats collapsing to ≤1 effective seat — a quorum that looks like a count and
+    is really one witness wearing many handles. Independence credit composes under the §6
+    weakest-link min: a group's credit is min(per-witness §7–9, effective_independent_seats).
+    """
+    seats = quorum.get("seats", []) or []
+
+    parent: dict = {}
+    def find(x):
+        parent.setdefault(x, x)
+        root = x
+        while parent[root] != root:
+            root = parent[root]
+        while parent[x] != root:
+            parent[x], x = root, parent[x]
+        return root
+    def union(a, b):
+        parent[find(a)] = find(b)
+
+    disclosed, undisclosed = [], []
+    seat_origins: dict = {}
+    origin_owner: dict = {}
+    for i, seat in enumerate(seats):
+        kid = str(seat.get("key_id") or f"seat{i}")
+        origins = {str(h).strip().lower() for h in (seat.get("upstream_origin_set") or []) if str(h).strip()}
+        if not origins:
+            undisclosed.append(kid)
+            continue
+        disclosed.append(kid)
+        node = ("seat", i)
+        seat_origins[node] = origins
+        find(node)
+        for o in origins:
+            if o in origin_owner:
+                union(node, origin_owner[o])
+            else:
+                origin_owner[o] = node
+
+    roots: dict = {}
+    for node, origins in seat_origins.items():
+        roots.setdefault(find(node), set()).update(origins)
+    effective = len(roots)
+    seat_count = len(seats)
+    return {
+        "seats": seat_count,
+        "effective_independent_seats": effective,
+        "undisclosed": undisclosed,
+        "clusters": [sorted(o) for o in roots.values()],
+        "captured_quorum": seat_count >= 2 and effective <= 1,
+    }
+
+
+def admits_independence(quorum: dict, candidate: dict) -> bool:
+    """§11 admission rule — does adding ``candidate`` to ``quorum`` raise the
+    effective-independent-seat count?
+
+    "Who maintains the audited seat set" cannot be answered by a maintainer's choice
+    without rebuilding the captured quorum one level up (the maintainer just admits
+    convergent friends). It is answered by the same provenance read: a candidate whose
+    ``upstream_origin_set`` overlaps the incumbents' adds no independence no matter who
+    admits it, so admission cannot manufacture a witness the union-find won't already
+    discount. That is what makes the maintainer recursion terminate instead of regress —
+    admission is gated by ``effective_independent_seats``, not by a roster decision. Each
+    admission decision is itself logged, so the gate is auditable from outside.
+    """
+    before = quorum_independence(quorum)["effective_independent_seats"]
+    after = quorum_independence({"seats": (quorum.get("seats", []) or []) + [candidate]})["effective_independent_seats"]
+    return after > before
+
+
 def main(argv=None) -> int:
     argv = argv if argv is not None else sys.argv[1:]
     if not argv:
@@ -200,6 +300,16 @@ def main(argv=None) -> int:
         fired = argv[i + 1:]
         argv = argv[:i]
     env = json.loads(open(argv[0]).read())
+    # §11 monitor: a standalone quorum doc ({"seats":[…]}) instead of an envelope.
+    if "seats" in env and "sigchain" not in env:
+        q = quorum_independence(env)
+        print(f"{q['seats']} seat(s) -> {q['effective_independent_seats']} effective-independent seat(s)"
+              + ("  [CAPTURED QUORUM]" if q["captured_quorum"] else ""))
+        for c in q["clusters"]:
+            print(f"  effective seat (shared origins): {c}")
+        if q["undisclosed"]:
+            print(f"  undisclosed provenance (earns nothing toward independence): {q['undisclosed']}")
+        return 0
     r = effective_witnesses(env)
     print(f"{r['signatures']} signature(s) -> {r['witnesses']} evidence-disjoint witness(es)"
           f" -> {r['steering_bounded_witnesses']} steering-bounded (§9) witness(es)")
