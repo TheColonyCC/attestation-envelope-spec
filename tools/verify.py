@@ -332,6 +332,60 @@ def check_coverage(env, *, offline: bool) -> tuple[str, list[str]]:
         return ("fail" if modality == "MUST" else "warn"), notes + [f"coverage_uri unreachable: {exc}"]
 
 
+def check_standing(env, *, now: dt.datetime | None = None, offline: bool) -> tuple[str, list[str]]:
+    """Contestability = standing (§12). Returns ('contestable'|'monument'|'n/a', notes).
+
+    A signed conclusion that outlives the relation — and the party who could
+    contest it — is a *monument*: cryptographically valid, semantically empty.
+    This check makes the monument visible. It is **advisory** (like issuer-binding),
+    not a hard reject: whether to rely on a monument is consumer policy. Note that
+    an expired `time_bounded` claim already rejects via `check_validity`; this check
+    catches the cases validity passes clean — a `perpetual` claim with no contest
+    channel, a lapsed contest window, or issuer-only ("self") contestability.
+    """
+    now = now or dt.datetime.now(dt.timezone.utc)
+    st = env.get("standing")
+    if not st:
+        if env["validity"]["validity_model"] == "perpetual":
+            return "monument", [
+                "perpetual claim with no `standing` block — signed-once, true-forever, "
+                "nobody home to contest (the monument case; see docs/standing.md)"
+            ]
+        return "n/a", ["no `standing` block; relation-contestability undeclared (consumer policy)"]
+
+    until = dt.datetime.fromisoformat(st["contestable_until"].replace("Z", "+00:00"))
+    issuer_id = env["issuer"].get("id")
+    non_issuer = [c for c in st["contestable_by"] if c.get("id") != issuer_id]
+    if not non_issuer:
+        return "monument", [
+            "`contestable_by` names only the issuer — self-contestation is not standing "
+            "(a party the issuer cannot lawyer for is required)"
+        ]
+    if now > until:
+        return "monument", [
+            f"contest window closed ({st['contestable_until']}) — standing has lapsed; "
+            "a signed conclusion no one can now contest"
+        ]
+
+    notes = [f"contestable by {len(non_issuer)} non-issuer principal(s) until {st['contestable_until']}"]
+    status_uri = st.get("contest_status_uri")
+    if status_uri and offline:
+        notes.append("contest_status_uri fetch SKIPPED (offline)")
+    elif status_uri:
+        import requests
+
+        try:
+            r = requests.get(status_uri, timeout=15, headers={"User-Agent": "attestation-verify/0.1"})
+            r.raise_for_status()
+            state = (r.json() or {}).get("state", "unknown")
+            notes.append(f"contest state per contest_status_uri: {state}")
+            if state in ("open", "upheld"):
+                notes.append(f"a contest is {state} — material; consumer SHOULD weigh before relying")
+        except Exception as exc:
+            notes.append(f"contest_status_uri unreachable: {exc}")
+    return "contestable", notes
+
+
 # --------------------------------------------------------------------------- #
 # Top-level
 # --------------------------------------------------------------------------- #
@@ -365,17 +419,28 @@ def verify(env, *, offline: bool = False, now: dt.datetime | None = None) -> dic
     if cov_state == "fail":
         verdict["reasons"].append("coverage check failed (MUST claim type)")
 
+    standing_state, standing_notes = check_standing(env, now=now, offline=offline)
+    verdict["checks"]["standing"] = {"state": standing_state, "notes": standing_notes}
+    verdict["monument"] = standing_state == "monument"
+
     verdict["accept"] = sig_ok and val_ok and ev_ok and cov_state != "fail"
     # The issuer-binding gap is NOT a hard reject in v0.1 (it's UNBINDABLE for
     # platform-handle issuers by design); it's surfaced so consumers can apply
     # their own policy. did:key issuers do bind.
     if not issuer_bound:
         verdict["reasons"].append("issuer-binding UNVERIFIED (advisory; see GAP-1)")
+    # Monument detection (§12) is advisory too: an accepted envelope can still be
+    # a monument (a conclusion no live party can contest). Surfaced, not rejected.
+    if verdict["monument"]:
+        verdict["reasons"].append("MONUMENT: relied-on conclusion with no live standing to contest (advisory; see docs/standing.md)")
     return verdict
 
 
 def _render(verdict: dict) -> str:
-    lines = [("ACCEPT" if verdict["accept"] else "REJECT")]
+    head = "ACCEPT" if verdict["accept"] else "REJECT"
+    if verdict.get("monument"):
+        head += "  ⚠ MONUMENT"
+    lines = [head]
     for name, c in verdict["checks"].items():
         head = c.get("state", "ok" if c.get("ok") else "FAIL")
         lines.append(f"  [{head}] {name}")
