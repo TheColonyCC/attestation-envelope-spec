@@ -47,6 +47,7 @@ COVERAGE_MODALITY = {
     "action_executed": "SHOULD",
     "state_transition": "MUST",
     "capability_coverage": "MUST",
+    "human_action_approval": "SHOULD",
 }
 
 ED25519_MULTICODEC = b"\xed\x01"
@@ -526,14 +527,8 @@ def check_standing(env, *, now: dt.datetime | None = None, offline: bool, http_g
     elif offline:
         notes.append("liveness: contest_status_uri present; check SKIPPED (offline)")
     else:
-        fetch = http_get
-        if fetch is None:
-            import requests
-
-            def fetch(u):
-                return requests.get(u, timeout=15, headers={"User-Agent": "attestation-verify/0.1"})
         try:
-            r = fetch(status_uri)
+            r = (http_get or _default_http_get)(status_uri)
             r.raise_for_status()
             try:
                 state = (r.json() or {}).get("state", "resolved")

@@ -40,7 +40,8 @@
         { "$ref": "#/$defs/Claim_ArtifactPublished" },
         { "$ref": "#/$defs/Claim_ActionExecuted" },
         { "$ref": "#/$defs/Claim_StateTransition" },
-        { "$ref": "#/$defs/Claim_CapabilityCoverage" }
+        { "$ref": "#/$defs/Claim_CapabilityCoverage" },
+        { "$ref": "#/$defs/Claim_HumanActionApproval" }
       ]
     },
     "evidence": {
@@ -94,7 +95,8 @@
             { "type": "string", "const": "did:web" },
             { "type": "string", "const": "did:voidly" },
             { "type": "string", "const": "platform-handle" },
-            { "type": "string", "const": "ethereum-eoa" }
+            { "type": "string", "const": "ethereum-eoa" },
+            { "type": "string", "const": "colony-sub" }
           ]
         },
         "id": {
@@ -169,6 +171,41 @@
           "type": "string",
           "format": "uri",
           "description": "Pointer to a published coverage descriptor (conformance test report, capability manifest)."
+        }
+      }
+    },
+    "Claim_HumanActionApproval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim_type", "action_digest", "decision", "approval_receipt_uri"],
+      "description": "A human-in-the-loop confirm/approval service (e.g. Glyt) attesting that a specific human operator decided on a specific agent action, at a specific auth strength, within a freshness window. It attests the *decision*, not that the action is wise/safe/legal. The `action_digest` binds THIS action, so the approval is non-transferable to another action.",
+      "properties": {
+        "claim_type": { "type": "string", "const": "human_action_approval" },
+        "action_digest": {
+          "type": "string",
+          "description": "multihash (e.g. `sha256:…`) of the exact action approved — binds this decision to that action; a relier recomputes it and rejects a mismatch."
+        },
+        "decision": { "type": "string", "enum": ["approved", "denied"] },
+        "approval_receipt_uri": {
+          "type": "string",
+          "description": "Where the approval record can be fetched and re-derived independently of the issuer (evidence for the decision)."
+        },
+        "approver_ref": {
+          "type": "string",
+          "description": "OPTIONAL — opaque reference to the approving principal (e.g. a pairwise operator id). MUST NOT be a human identity — it is a stable, non-reversible handle, not a name."
+        },
+        "acr": {
+          "type": "string",
+          "description": "OPTIONAL — achieved authentication strength of the approval, e.g. `mfa` (per OIDC `acr`)."
+        },
+        "amr": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "OPTIONAL — achieved authentication methods, e.g. `[\"pwd\", \"otp\"]` (per OIDC `amr`)."
+        },
+        "approved_at": {
+          "type": "string",
+          "description": "OPTIONAL — RFC 3339 instant the decision was made."
         }
       }
     },
