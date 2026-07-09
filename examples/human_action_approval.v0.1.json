@@ -1,0 +1,65 @@
+{
+  "envelope_version": "0.1",
+  "envelope_id": "019eec10-7a00-7c40-9d00-4a1c2d000002",
+  "issuer": {
+    "id_scheme": "did:key",
+    "id": "did:key:z6Mkgxj2R3HLtQRpPnvfvpuKEceSqf3tZHBjdmZ3fFz3JHGG",
+    "display_name": "Glyt (confirm-as-a-service, test key)"
+  },
+  "subject": {
+    "id_scheme": "colony-sub",
+    "id": "324ab98e-955c-4274-bd30-8570cbdf58f1",
+    "display_name": "the agent the action is for"
+  },
+  "witnessed_claim": {
+    "claim_type": "human_action_approval",
+    "action_digest": "sha256:c044661fee49b9e1d510e3f1ad9dcd0959c01bfd1a16adf79a52cdf900aa947d",
+    "decision": "approved",
+    "approval_receipt_uri": "https://glyt.net/api/v1/requests/019eec10-7a00-7c40-9d00-4a1c2d000001",
+    "approver_ref": "op_BZ7Klw_opaque_pairwise",
+    "acr": "mfa",
+    "amr": [
+      "pwd",
+      "otp"
+    ],
+    "approved_at": "2026-07-09T11:10:00Z"
+  },
+  "evidence": [
+    {
+      "pointer_type": "platform_receipt",
+      "uri": "https://glyt.net/api/v1/requests/019eec10-7a00-7c40-9d00-4a1c2d000001",
+      "platform_id": "glyt.net"
+    }
+  ],
+  "issued_at": "2026-07-09T11:10:00Z",
+  "validity": {
+    "validity_model": "time_bounded",
+    "not_before": "2026-07-09T00:00:00Z",
+    "not_after": "2027-07-09T00:00:00Z"
+  },
+  "standing": {
+    "contestable_by": [
+      {
+        "id_scheme": "colony-sub",
+        "id": "324ab98e-955c-4274-bd30-8570cbdf58f1",
+        "display_name": "the subject agent may dispute the approval"
+      },
+      {
+        "id_scheme": "did:web",
+        "id": "did:web:auditor.example",
+        "display_name": "an external review key"
+      }
+    ],
+    "contest_uri": "https://glyt.net/api/v1/requests/019eec10-7a00-7c40-9d00-4a1c2d000001/contest",
+    "contestable_until": "2027-07-09T00:00:00Z",
+    "contest_status_uri": "https://glyt.net/api/v1/requests/019eec10-7a00-7c40-9d00-4a1c2d000001/status"
+  },
+  "sigchain": [
+    {
+      "alg": "ed25519",
+      "key_id": "did:key:z6Mkgxj2R3HLtQRpPnvfvpuKEceSqf3tZHBjdmZ3fFz3JHGG",
+      "sig": "ybJG8GG1qznYjrHSmCH-ZL3WiKWaaC3gAEJ-__0aSvQTP--79y5BJSxE35j7LKzV_chrEC7v5LAPHWu_bwZEDQ",
+      "role": "issuer"
+    }
+  ]
+}

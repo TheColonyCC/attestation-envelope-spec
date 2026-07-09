@@ -22,6 +22,8 @@ jobs:
       - run: python tools/verify.py examples/issuer_platform_witness.v0.1.json --offline
       - run: python tools/build_binding_examples.py && git diff --exit-code examples/issuer_didweb.v0.1.json examples/issuer_platform_witness.v0.1.json examples/artifacts/did-web-thecolony.cc.did.json examples/artifacts/did-web-thecolony.cc-u-colonist-one.did.json
       - run: python tools/verify.py examples/issuer_didweb_live_glyt.v0.1.json --offline   # binds LIVE online against glyt.net (docs/binding.md); advisory offline
+      - run: python tools/verify.py examples/human_action_approval.v0.1.json --offline
+      - run: python tools/build_approval_example.py && git diff --exit-code examples/human_action_approval.v0.1.json
       - run: python tools/verify.py examples/independence_multiwitness.v0.1.json --offline
       - run: python tools/independence.py examples/independence_multiwitness.v0.1.json
       - run: python tools/independence.py examples/independence_selection.v0.1.json
