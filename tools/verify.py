@@ -627,7 +627,11 @@ def _render(verdict: dict) -> str:
             lines.append(f"        - {n}")
         anchor = c.get("anchor")  # §12.3 externally-anchored standing sub-result
         if anchor:
-            lines.append(f"        [{anchor['state']}] standing.anchor")
+            cc = anchor.get("contest_control")
+            head = f"[{anchor['state']}] standing.anchor"
+            if cc and cc != "undeclared":
+                head += f" (contest_control: {cc})"
+            lines.append(f"        {head}")
             for n in anchor["notes"]:
                 lines.append(f"              - {n}")
     if verdict["reasons"]:

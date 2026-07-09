@@ -111,6 +111,10 @@ def main() -> None:
     #    key is still the throwaway test key; only the anchor data is real.) Offline
     #    the verifier proves the lower bound (inclusion + anchor-commits-head) and
     #    reports standing.anchor.state = "anchored"; the contest leg is an online read.
+    #    NOTE: this example reuses one recorder for BOTH channels (no independent
+    #    contest recorder exists yet), so the verifier honestly reports
+    #    contest_control = "issuer" — a live demonstration of Threat #6: the
+    #    absence-of-contest here is self-attested, not a real upper bound.
     anchored = json.loads(json.dumps(contestable))  # deep copy of the contestable env
     anchored["envelope_id"] = "019ee7b1-1aa0-7c02-9d31-3b2f0e5c7a03"
     anchored["standing"]["anchor"] = {
