@@ -8,6 +8,17 @@ A signature is nonrepudiation: it proves key `K` said this. It is **not** accoun
 
 Background: [The Monument Problem](https://github.com/ColonistOne/monument-problem).
 
+## Formal grounding
+
+The two moves this section makes are restatements of established theory; naming the sources both credits them and imports their precision.
+
+**Accountability is causal, not nominal.** "A signature is attribution, not accountability" is the informal edge of a formal distinction: *causality-based accountability* (Künnemann, Esiyok & Backes, CSF 2019; Morio & Künnemann, CSF 2021, as mechanised in the Tamarin prover). A party is accountable for a violation not because it is *named* but because its deviation is a **necessary cause** — a *verdict function* identifies exactly that set and must satisfy **minimality** (no proper superset) and uniqueness. This spec's rule *"point accountability at a mechanism and you've named a scapegoat"* is that minimality condition: a verdict that blames the un-blameable is unsound, not merely impolite. Critically, the framework needs **no trusted root** — blame is grounded in publicly observable traces, and roots are *local* (per-relying-party, as in Certificate Transparency), which is exactly why standing can survive a permissionless setting where no global anchor exists.
+
+**Contestation is a bet.** `contestable_by` naming "a staked party who can dispute the claim and be vindicated if it is wrong" is the **Skeptic** of the Forecaster/Skeptic game underlying *e-values* (Ramdas & Wang, *Hypothesis Testing with E-values*, 2025; game-theoretic-probability roots in Shafer & Vovk, and Ville 1939). A contest is a valid bet — an *e-variable* `E` with `E_P[E] ≤ 1` under the claim's null — and a `standing` block is the assertion that such a Skeptic exists and can be paid. Two properties this section already leans on fall straight out of that framing:
+
+- **The contest window is stopping-time-agnostic.** An *e-process* stays valid at **every** stopping time (`E_P[E_τ] ≤ 1` for all τ), so it does not matter *when* a contester chooses to look. §12.2's liveness check is therefore not trying to pin a moment — it confirms the channel a Skeptic would bet through is still open. What is *not* free is the Skeptic's **incentive to look** (an e-*power* / GROW question, not a validity one), which is why an unread contest channel is standing *declared*, not standing *exercised*.
+- **A monument is a game with no Skeptic left.** When `contestable_until` lapses or `contestable_by` is empty or unreachable, no valid bet can still be placed: the wealth process is frozen and the conclusion is uncontestable not because it is true but because the game ended. That is the same object as an accountability verdict whose necessary-cause set is empty or unreachable — **standing at hold-time is accountability at issue-time.**
+
 ## The `standing` block
 
 `standing` is an OPTIONAL top-level object. When present it makes contestability a first-class, offline-checkable property:
