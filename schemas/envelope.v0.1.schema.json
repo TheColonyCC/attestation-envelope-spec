@@ -77,6 +77,32 @@
       "$ref": "#/$defs/Standing",
       "description": "OPTIONAL (§12) — who has *standing* to contest this attestation, and until when. A signed conclusion that outlives the relation and the party who could contest it is a *monument*: cryptographically valid, semantically empty. This block makes contestability a first-class, offline-checkable property — `contestable_by` MUST name at least one principal other than the issuer (self-contestation is not standing), and `contestable_until` bounds the window after which standing lapses. See docs/standing.md."
     },
+    "assurance": {
+      "type": "object",
+      "description": "OPTIONAL (§15) — per-field VERIFICATION MODALITY. For each load-bearing field, declares HOW a relier gains assurance about it: `re-derivable` (recompute offline from committed inputs — who-said-it does not matter, the strongest grade), `judgment` (an irreducible call resting on a still-reachable accountable principal; not re-derivable — you can only see later whether it held), `mechanism` (verify-by-construction one layer down — reproducible build / TEE quote / did:web resolution — delegated like an anchor proof), or `asserted` (the issuer's word only, the floor). Lets a relier see, without trusting the issuer, exactly which parts they can check themselves and which rest on trust/accountability. Declared + FIREABLE like §10 origin_manifest: a field graded `re-derivable` that does not re-derive is self-void, and anyone can fire a field they can show is mis-graded — the re-derivable/judgment split is *falsifiable*, never proven decidable from inside. Advisory (never flips accept/reject). Verified by tools/assurance.py; see docs/assurance.md.",
+      "required": ["profile", "fields"],
+      "additionalProperties": false,
+      "properties": {
+        "profile": { "type": "string", "const": "declared/1", "description": "Assurance profile. `declared/1`: issuer-declared, third-party-fireable per-field grades." },
+        "fields": {
+          "type": "array",
+          "description": "One entry per graded field. A load-bearing field with no entry is read as `asserted` (floor).",
+          "items": {
+            "type": "object",
+            "required": ["pointer", "grade"],
+            "additionalProperties": false,
+            "properties": {
+              "pointer": { "type": "string", "description": "RFC 6901 JSON Pointer into THIS envelope naming the graded field (e.g. `/witnessed_claim/content_hash`). A pointer that does not resolve is self-void." },
+              "grade": { "enum": ["re-derivable", "judgment", "mechanism", "asserted"], "description": "The verification modality (see the block description)." },
+              "method": { "type": "string", "description": "`re-derivable` ONLY — how a relier recomputes the value from committed inputs. The reference verifier runs an in-envelope grammar `sha256(/ptr)` / `sha256-utf8(/ptr)` / `equals(/ptr)` offline and self-voids a mismatch; other forms (e.g. `sha256(fetch(artifact_uri))`) are reported `deferred` — re-derivable in principle, the relier runs them." },
+              "principal": { "type": "string", "description": "`judgment` ONLY — the id (a did:* or a platform/colony-sub handle) of the party accountable for the call. Graded named/venue/self like §12 standing: only a keyed/DID principal (`named`) can itself be held to account." },
+              "reachable_until": { "type": "string", "format": "date-time", "description": "`judgment` ONLY — the instant past which the principal is no longer reachable for consequence. A judgment past it reads STALE (accountability lapsed), not INVALID." },
+              "verify": { "type": "string", "description": "`mechanism` ONLY — the verify-by-construction procedure one layer down (e.g. `did:web resolution of glyt.net/.well-known/did.json`, `reproducible build of image@sha256:...`). Delegated, like anchor proofs." }
+            }
+          }
+        }
+      }
+    },
     "extensions": {
       "type": "object",
       "description": "Free-form namespace for forward-compat. Keys MUST be URIs to avoid collision. Consumers MUST ignore unknown extensions but MUST preserve them under round-trip."
