@@ -68,6 +68,29 @@ byte-for-byte:
 Anything else (notably `fetch(...)`) is reported `deferred`: re-derivable, but the
 relier runs it. Values may be bare hex or `sha256:`-prefixed.
 
+## Proposition binding (the grade binds to the proposition, not the value)
+
+A method re-derives a *proposition*, which is often narrower than the field's plain
+reading. `sha256(fetch(artifact_uri))` establishes *"the bytes at that URI hashed to
+this value when fetched"* — integrity-as-fetched — not *"the artifact is authentic"* or
+*"the claim it makes is true"*. A counter-signature over a fresh nonce proves *"the
+endpoint's key was reachable and willing at T"*, not *"the service was healthy"*. Same
+grade (`re-derivable`), wildly different claim. Let a strong-looking field's value be
+read as the wider thing and you have laundered trust through a narrow witness.
+
+So a field MAY carry an optional **`proposition`**: the exact claim its `method` /
+`verify` establishes, in plain language. The grade binds to *that*, and the verifier
+surfaces it verbatim so a relier — or a policy — attaches assurance to the proposition,
+not to the value. It changes no arithmetic (a re-derived field still counts as
+confirmed); it changes what "confirmed" is allowed to mean.
+
+Like the grade itself, this is **declared + fireable**, never decided: the verifier
+cannot know how downstream reads the value, so it does not try to detect
+"value outruns proposition." Instead, a field whose value outruns its declared
+proposition is exactly what a third party fires (`--fire=/pointer`) — the honesty is
+enforced by contestability, not by a decision procedure. Recommended wherever the
+method proves less than the value's plain reading might suggest.
+
 ## Judgment freshness
 
 A `judgment` field may carry `reachable_until` — the instant past which the

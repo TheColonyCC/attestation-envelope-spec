@@ -20,6 +20,12 @@ not re-derive is self-void; anyone can fire a field they can show is mis-graded 
 judgment dressed up as a derivation over hand-picked inputs). Voided fields fall to
 the floor and count against the trust surface.
 
+A field MAY also carry a `proposition`: the exact claim its method/verify actually
+establishes. The grade binds to that proposition, not to the field's value — a witness
+that proves a narrow fact ("key reachable at T") must not be read as a wider claim
+("service healthy"). The verifier surfaces the proposition verbatim so a relier
+attaches assurance to it; a value that outruns its proposition is fireable.
+
 The headline output is `trust_surface`: the fraction of graded fields a relier
 CANNOT confirm by re-derivation — the residue that is left after re-deriving
 everything you can, and the only place trust/accountability is the right tool.
@@ -180,6 +186,16 @@ def assess(envelope: dict, *, fired: Optional[list] = None, now: Optional[str] =
         else:
             r["state"] = "unknown-grade"
             r["notes"].append(f"unknown grade {grade!r}")
+        prop = f.get("proposition")
+        if prop:
+            # The grade binds to the PROPOSITION the method/verify establishes, not to
+            # the field's value — a narrow witness must not be read as a wider claim.
+            # Surfaced verbatim; the value-outruns-proposition case is fireable (§15).
+            r["proposition"] = prop
+            if grade in ("re-derivable", "mechanism"):
+                r["notes"].append(f'establishes only: "{prop}" — grade binds to this proposition, not the field value')
+            else:
+                r["notes"].append(f'proposition: "{prop}"')
         results.append(r)
 
     total = len(results)

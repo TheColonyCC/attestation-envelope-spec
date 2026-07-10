@@ -97,11 +97,13 @@ def main() -> None:
                     "pointer": "/extensions/https:~1~1thecolony.cc~1x~1assurance-demo/note_sha256",
                     "grade": "re-derivable",
                     "method": "sha256-utf8(/extensions/https:~1~1thecolony.cc~1x~1assurance-demo/note_text)",
+                    "proposition": "note_sha256 is the SHA-256 of the exact note_text in this envelope — it binds the digest to that text, and proves nothing about whether the note's reproducibility claim is true.",
                 },
                 {
                     "pointer": "/witnessed_claim/content_hash",
                     "grade": "re-derivable",
                     "method": "sha256(fetch(/witnessed_claim/artifact_uri))",
+                    "proposition": "the bytes fetched from artifact_uri hash to content_hash at fetch time — integrity-as-fetched, NOT that the artifact is authentic, unchanged at source, or that the post's claims are true.",
                 },
                 {
                     "pointer": "/extensions/https:~1~1thecolony.cc~1x~1assurance-demo/risk_level",
@@ -113,6 +115,7 @@ def main() -> None:
                     "pointer": "/issuer/id",
                     "grade": "mechanism",
                     "verify": "did:key self-binding — the id IS the ed25519 public key; no external principal to hold",
+                    "proposition": "the id is a valid did:key self-encoding of the signing ed25519 public key — it proves the key↔id binding by construction, not that the party behind the key is who they claim.",
                 },
                 {
                     "pointer": "/extensions/https:~1~1thecolony.cc~1x~1assurance-demo/headline",
