@@ -197,3 +197,51 @@ def test_check_live_unanchored_on_bad_inclusion():
     v = tl.check_live(REC, 1, DIGEST, now=NOW,
                       http_get=_fake_get(_feed(), bad, _contests()), pubkey_bound=_bound)
     assert v["state"] == "unanchored"
+
+
+# --- independent contest recorder + derived target (Threat #6 upper bound) --- #
+def _fake_get_two(att_rec, con_rec):
+    def get(url):
+        u = url.split("?")[0].rstrip("/")
+        if "/contests" in url:
+            return _contests()
+        if u.endswith("/entry/1"):
+            return _incl()
+        if u.endswith(f"/{att_rec}") or u.endswith(f"/{con_rec}"):
+            return _feed()
+        raise AssertionError(f"unexpected url {url}")
+    return get
+
+
+def test_check_live_distinct_contest_recorder_is_independent_declared():
+    # Attestation on one recorder, contests on a DISTINCT recorder (Threat #6 fix).
+    v = tl.check_live("rec_ATT", 1, DIGEST, contest_recorder="rec_CON", now=NOW, max_lag_s=86400,
+                      http_get=_fake_get_two("rec_ATT", "rec_CON"), pubkey_bound=_bound)
+    assert v["contest_control"] == "independent-declared"
+    assert v["state"] == "contested"
+    assert v["lower_bound"]["block_height"] == 957323
+
+
+def test_check_live_same_recorder_still_issuer():
+    v = tl.check_live(REC, 1, DIGEST, now=NOW,
+                      http_get=_fake_get(_feed(), _incl(), _contests()), pubkey_bound=_bound)
+    assert v["contest_control"] == "issuer"  # backward-compatible
+
+
+def test_check_live_derives_target_from_entry_when_omitted():
+    captured = {}
+
+    def get(url):
+        if "/entry/1" in url:
+            return _incl()
+        if "contests?target=" in url:
+            captured["target"] = url.split("target=")[1]
+            return _contests()
+        if url.rstrip("/").endswith(REC):
+            return _feed()
+        raise AssertionError(f"unexpected url {url}")
+
+    v = tl.check_live(REC, 1, now=NOW, http_get=get, pubkey_bound=_bound)  # no target_digest
+    assert captured["target"] == DIGEST  # derived == the attestation entry's payload_hash
+    assert v["state"] == "contested"
+    assert any("derived from attestation entry" in n for n in v["notes"])

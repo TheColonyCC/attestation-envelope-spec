@@ -267,29 +267,49 @@ def pubkey_bound_live(sub: str, pubkey_b64: str, *, http_get: Optional[Callable]
                for b in feed.get("bindings", []) or [])
 
 
-def check_live(recorder: str, entry_seq: int, target_digest: str, *,
+def check_live(recorder: str, entry_seq: int, target_digest: Optional[str] = None, *,
+               contest_recorder: Optional[str] = None,
                now: Optional[dt.datetime] = None, max_lag_s: Optional[int] = None,
                http_get: Optional[Callable] = None, pubkey_bound: Optional[Callable] = None) -> dict:
-    """Full §12.3 read against a live Touchstone recorder. Returns a verdict shaped
-    like standing_anchor.check: {state, lower_bound, provable_through, contest_control, notes}."""
+    """Full §12.3 read against a live Touchstone deployment. Returns a verdict shaped
+    like standing_anchor.check: {state, lower_bound, provable_through, contest_control, notes}.
+
+    Supports an INDEPENDENT contest recorder (Threat #6's actual fix): pass
+    `contest_recorder` distinct from the attestation `recorder` and the upper-bound
+    leg is read from — and anchored by — that recorder's own checkpoints. When
+    `target_digest` is omitted it is DERIVED from the attestation entry's
+    payload_hash (the digest a contest references), so a receipt need only carry the
+    two recorders + the entry seq. Same recorder for both legs => contest_control
+    `issuer` (self-attested absence); distinct => `independent-declared`.
+    """
     now = now or dt.datetime.now(dt.timezone.utc)
-    feed = _get_json(f"{_BASE}/{recorder}", http_get)
+    att_feed = _get_json(f"{_BASE}/{recorder}", http_get)
     incl = _get_json(f"{_BASE}/{recorder}/entry/{entry_seq}", http_get)
-    contests = _get_json(f"{_BASE}/{recorder}/contests?target={target_digest}", http_get)
 
     notes: list[str] = []
-    ok, lower_bound, lnotes = verify_inclusion_response(incl, feed)
+    ok, lower_bound, lnotes = verify_inclusion_response(incl, att_feed)
     notes += lnotes
     if not ok:
         return {"state": "unanchored", "lower_bound": None, "provable_through": None,
                 "contest_control": "n/a", "notes": notes}
 
+    # Derive the contest target from the attestation entry if not given: the entry's
+    # payload_hash is exactly the digest a contest references.
+    if target_digest is None:
+        target_digest = incl.get("entry", {}).get("payload_hash")
+        notes.append(f"contest target derived from attestation entry payload_hash {str(target_digest)[:12]}…")
+
+    crec = contest_recorder or recorder
+    # A distinct contest recorder anchors the upper bound with ITS OWN checkpoints.
+    contest_feed = att_feed if crec == recorder else _get_json(f"{_BASE}/{crec}", http_get)
+    contests = _get_json(f"{_BASE}/{crec}/contests?target={target_digest}", http_get)
+
     cstate, provable_through, real, cnotes = check_contest_channel(
-        contests, feed, now=now, max_lag_s=max_lag_s, pubkey_bound=pubkey_bound)
+        contests, contest_feed, now=now, max_lag_s=max_lag_s, pubkey_bound=pubkey_bound)
     notes += cnotes
 
-    # contest_control: same recorder for both channels => issuer-controlled (Threat #6)
-    contest_control = "issuer" if contests.get("recorder") == recorder else "independent-declared"
+    # contest_control: same recorder for both legs => issuer-controlled (Threat #6).
+    contest_control = "issuer" if crec == recorder else "independent-declared"
     state = {"contested": "contested", "stale": "stale"}.get(cstate, "anchored")
     return {"state": state, "lower_bound": lower_bound, "provable_through": provable_through,
             "contest_control": contest_control, "contests": real, "notes": notes}
@@ -314,7 +334,10 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Verify §12.3 standing against a live Touchstone recorder.")
     ap.add_argument("recorder", help="attestation recorder id (rec_…)")
     ap.add_argument("entry_seq", type=int, help="sequence of the attestation entry (lower bound)")
-    ap.add_argument("target_digest", help="attestation digest to check contests against (upper bound)")
+    ap.add_argument("target_digest", nargs="?", default=None,
+                    help="attestation digest for the contest query; omit to derive it from the entry")
+    ap.add_argument("--contest-recorder", type=str, default=None,
+                    help="an INDEPENDENT contest recorder id (Threat #6 fix); defaults to the attestation recorder")
     ap.add_argument("--max-lag-s", type=int, default=None, help="max contest-checkpoint staleness before STALE")
     ap.add_argument("--contest-file", type=str, default=None,
                     help="a held contestant-signed contest (JSON); prove SIGNED-BUT-ABSENT if the channel omits it")
@@ -322,13 +345,15 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
 
     v = check_live(args.recorder, args.entry_seq, args.target_digest,
-                   max_lag_s=args.max_lag_s,
+                   contest_recorder=args.contest_recorder, max_lag_s=args.max_lag_s,
                    pubkey_bound=lambda sub, pk: pubkey_bound_live(sub, pk))
 
     if args.contest_file:
         held = json.loads(pathlib.Path(args.contest_file).read_text())
-        channel = _get_json(f"{_BASE}/{args.recorder}/contests?target={args.target_digest}", None)
-        v["signed_but_absent"] = signed_but_absent(held, channel, args.recorder)
+        crec = args.contest_recorder or args.recorder
+        target = args.target_digest or held.get("target_digest")
+        channel = _get_json(f"{_BASE}/{crec}/contests?target={target}", None)
+        v["signed_but_absent"] = signed_but_absent(held, channel, crec)
 
     print(json.dumps(v, indent=2) if args.json else _render(v))
     if args.contest_file and not args.json:
