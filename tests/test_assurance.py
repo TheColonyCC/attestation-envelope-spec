@@ -134,6 +134,40 @@ def test_ungraded_envelope_reports_floor():
     assert r["state"] == "ungraded" and r["profile"] is None
 
 
+# --- #25 proposition binding: grade binds to the proposition, not the value -- #
+def test_proposition_surfaced_on_field_result():
+    # The re-derivable note field carries a proposition scoping what re-derivation buys.
+    f = _field(a.assess(load()), NOTE_PTR)
+    assert f["state"] == "re-derived"
+    assert "proposition" in f and "SHA-256 of the exact note_text" in f["proposition"]
+    assert any("grade binds to this proposition" in n for n in f["notes"])
+
+
+def test_proposition_does_not_change_trust_surface():
+    # A proposition scopes the claim; it must not alter the re-derivation accounting.
+    p = a.assess(load())["profile"]
+    assert p["confirmed_re_derivable"] == 1 and p["trust_surface"] == 0.8
+
+
+def test_proposition_absent_field_has_no_proposition_key():
+    # The asserted headline field declares no proposition — key stays absent.
+    f = _field(a.assess(load()), "/extensions/https:~1~1thecolony.cc~1x~1assurance-demo/headline")
+    assert "proposition" not in f
+
+
+def test_proposition_survives_on_mechanism_grade():
+    f = _field(a.assess(load()), "/issuer/id")
+    assert f["state"] == "mechanism" and "key↔id binding" in f["proposition"]
+
+
+def test_fired_field_with_proposition_still_voids():
+    # Firing a field whose value outruns its proposition drops it to the floor.
+    res = a.assess(load(), fired=[NOTE_PTR])
+    f = _field(res, NOTE_PTR)
+    assert f["state"] == "fired"  # fired short-circuits before the proposition note
+    assert res["profile"]["voided"] == 1
+
+
 # --- the block is inside the signature (advisory tool, but tamper-evident) -- #
 def test_mutating_a_grade_is_visible_because_the_block_is_signed():
     # assurance.py is advisory and does not check the sigchain itself; this asserts
