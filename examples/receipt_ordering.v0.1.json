@@ -1,0 +1,13 @@
+{
+  "_comment": "§16 worked example — three receipts over one subject forming a clean per-subject prev-hash chain, each committing its own beacon round. Verifies `ordered`. Swap either mutation in `_negatives` into `receipts` to see `forked` / `backdated`.",
+  "subject_note": "subject = the object each receipt makes a claim about (a credential id, an artifact digest, an agent action). `id` is the receipt's own content hash; `prev` is the id of the prior receipt over the SAME subject; `beacon_round` is a per-receipt drand round (or any monotone external anchor).",
+  "receipts": [
+    { "id": "sha256:aa01", "subject": "did:web:svc/cred/42", "prev": null,          "beacon_round": 4210001, "claim": "issued" },
+    { "id": "sha256:bb02", "subject": "did:web:svc/cred/42", "prev": "sha256:aa01", "beacon_round": 4210044, "claim": "amended: scope narrowed" },
+    { "id": "sha256:cc03", "subject": "did:web:svc/cred/42", "prev": "sha256:bb02", "beacon_round": 4210090, "claim": "retracted" }
+  ],
+  "_negatives": {
+    "fork_same_prev": { "id": "sha256:dd04", "subject": "did:web:svc/cred/42", "prev": "sha256:bb02", "beacon_round": 4210091, "claim": "amended: scope WIDENED — equivocation vs cc03, both claim prev bb02" },
+    "backdated": { "id": "sha256:ee05", "subject": "did:web:svc/cred/42", "prev": "sha256:cc03", "beacon_round": 4210090, "claim": "beacon_round <= prev's — a backdate" }
+  }
+}
