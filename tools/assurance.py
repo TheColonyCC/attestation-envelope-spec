@@ -6,6 +6,10 @@ of an envelope they can check themselves and which rest on trust or accountabili
 
   re-derivable — the relier recomputes/verifies it offline from committed inputs.
                  Who-said-it does not matter; the strongest grade.
+  probe-consistent — repeatable in kind, not re-derivable in instance (a sensor read,
+                 a perturbation probe, a load test). The value can't be recomputed (the
+                 world moved) but the relier re-runs the procedure and checks a `tolerance`
+                 committed IN the receipt holds. No committed tolerance -> self-void.
   judgment     — an irreducible judgment call by a principal. Not re-derivable; you
                  can only see later whether it held. Rests on a principal still
                  reachable when the consequence lands (graded named/venue/self, §12).
@@ -43,7 +47,7 @@ import re
 import sys
 from typing import Any, Optional
 
-GRADES = ("re-derivable", "judgment", "mechanism", "asserted")
+GRADES = ("re-derivable", "probe-consistent", "judgment", "mechanism", "asserted")
 
 
 # --- RFC 8785 JCS (byte-identical to tools/verify.py) ------------------------ #
@@ -177,6 +181,32 @@ def assess(envelope: dict, *, fired: Optional[list] = None, now: Optional[str] =
                 r["notes"].append(f"principal reachable_until {ru} < now {now} — accountability lapsed (STALE, not INVALID)")
             else:
                 r["notes"].append(f"irreducible judgment; accountable principal grade={pg}")
+        elif grade == "probe-consistent":
+            # Repeatable in kind, not re-derivable in instance (a sensor read, a
+            # perturbation probe, a load test): the relier can't recompute the exact
+            # value (the world moved) but CAN re-run the procedure and check a committed
+            # `tolerance` holds. The tolerance MUST live in the receipt — a bound fixed
+            # only in the falsifier's definition can be picked lenient after the result
+            # (the cherry-pick §9 beacon-draw closes for instance-selection, reopened for
+            # the bound). No tolerance -> self-void, falls to the floor.
+            tol = f.get("tolerance")
+            if tol in (None, "", {}, []):
+                r["state"] = "self-void"
+                r["notes"].append("declared probe-consistent but carries no committed `tolerance` — a bound living only in the falsifier is pickable post-hoc; self-void")
+            else:
+                r["state"] = "probe-consistent"
+                fc = f.get("falsifier_class")
+                r["notes"].append(
+                    "re-runnable in kind, not re-derivable in instance; re-run the probe and check tolerance="
+                    + json.dumps(tol) + (f" under falsifier_class={fc!r}" if fc else ""))
+                if not fc:
+                    r["notes"].append("no `falsifier_class` — a relier can't check the committed tolerance is within class norms (recommended)")
+                if not f.get("tolerance_commitment"):
+                    r["notes"].append("no `tolerance_commitment` — the bound is not shown pre-committed to the probe; FIREABLE for high-stakes reliance (cherry-picked-bound risk)")
+                ru = f.get("reachable_until") or f.get("valid_until")
+                if now and ru and str(ru) < str(now):
+                    r["state"] = "probe-stale"
+                    r["notes"].append(f"instance expired ({ru} < now {now}) — the procedure still re-runs (STALE, not INVALID)")
         elif grade == "mechanism":
             r["state"] = "mechanism"
             r["notes"].append("verify-by-construction one layer down — delegated to: " + str(f.get("verify", "(unspecified)")))
@@ -206,6 +236,7 @@ def assess(envelope: dict, *, fired: Optional[list] = None, now: Optional[str] =
         "total": total,
         "confirmed_re_derivable": confirmed,
         "deferred_re_derivable": deferred,
+        "probe_consistent": sum(1 for r in results if r["state"] in ("probe-consistent", "probe-stale")),
         "judgment": sum(1 for r in results if r["state"] in ("judgment", "stale")),
         "mechanism": sum(1 for r in results if r["state"] == "mechanism"),
         "asserted": sum(1 for r in results if r["state"] == "asserted"),
@@ -236,6 +267,7 @@ def _fmt(res: dict) -> str:
     lines.append(
         f"  --\n  confirmed re-derivable: {p['confirmed_re_derivable']}/{p['total']}"
         f"  | deferred: {p['deferred_re_derivable']}"
+        f"  | probe-consistent: {p['probe_consistent']}"
         f"  | judgment: {p['judgment']}  mechanism: {p['mechanism']}  asserted: {p['asserted']}  voided: {p['voided']}"
     )
     lines.append(
