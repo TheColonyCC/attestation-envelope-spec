@@ -43,6 +43,20 @@ def _selection_grade(signer: dict) -> str:
     return g if g in SELECTION_TIERS else "obligor_picked"
 
 
+# Boot-manifest / §12.1-style attestor grade for an agent's birth claim: who stands
+# behind "this agent runs base_model X" — `named` (an accountable operator/provider),
+# `venue` (a platform-handle class only), or `self` (the agent's own word). A birth
+# claim nobody but the agent is accountable for is unfalsifiable, so it is the floor:
+# an absent grade fails closed to `self`. See docs/boot-manifest.md §4.
+BOOT_GRADES = {"self": 0, "venue": 1, "named": 2}
+ACCOUNTABLE_BOOT_GRADE = "named"
+
+
+def _boot_grade(seat: dict) -> str:
+    g = str(seat.get("grade", "") or "").strip().lower()
+    return g if g in BOOT_GRADES else "self"
+
+
 def _origins(signer: dict, evidence: list) -> set:
     """The set of evidence content_hashes this signer re-derived from. An
     evidence_ref out of range, or to an entry without a content_hash, contributes
@@ -223,6 +237,14 @@ def quorum_independence(quorum: dict) -> dict:
     alarm: ≥2 seats collapsing to ≤1 effective seat — a quorum that looks like a count and
     is really one witness wearing many handles. Independence credit composes under the §6
     weakest-link min: a group's credit is min(per-witness §7–9, effective_independent_seats).
+
+    Birth-attestor grade (boot manifests, docs/boot-manifest.md §4): when the seats carry a
+    ``grade`` (``named``/``venue``/``self``, absent → ``self``), the return additionally
+    carries ``accountable_independent_seats`` (clusters with ≥1 ``named`` seat) and
+    ``self_attested`` (seats whose birth nobody but the agent stands behind). This gates the
+    same union-find on accountability, non-destructively — ``effective_independent_seats`` is
+    unchanged — exactly as §9 keeps ``witnesses`` and adds ``steering_bounded_witnesses``. A
+    gradeless quorum (the pure §11 derivation case) is unaffected: the keys aren't reported.
     """
     seats = quorum.get("seats", []) or []
 
@@ -241,6 +263,9 @@ def quorum_independence(quorum: dict) -> dict:
     disclosed, undisclosed = [], []
     seat_origins: dict = {}
     origin_owner: dict = {}
+    node_accountable: dict = {}   # node -> is this seat's birth attested by an accountable party
+    self_attested: list = []
+    graded = any("grade" in seat for seat in seats)  # is this a boot-manifest (graded) quorum?
     for i, seat in enumerate(seats):
         kid = str(seat.get("key_id") or f"seat{i}")
         origins = {str(h).strip().lower() for h in (seat.get("upstream_origin_set") or []) if str(h).strip()}
@@ -248,8 +273,13 @@ def quorum_independence(quorum: dict) -> dict:
             undisclosed.append(kid)
             continue
         disclosed.append(kid)
+        if graded:
+            grade = _boot_grade(seat)
+            if BOOT_GRADES[grade] < BOOT_GRADES[ACCOUNTABLE_BOOT_GRADE]:
+                self_attested.append(kid)
         node = ("seat", i)
         seat_origins[node] = origins
+        node_accountable[node] = graded and BOOT_GRADES[_boot_grade(seat)] >= BOOT_GRADES[ACCOUNTABLE_BOOT_GRADE]
         find(node)
         for o in origins:
             if o in origin_owner:
@@ -258,17 +288,31 @@ def quorum_independence(quorum: dict) -> dict:
                 origin_owner[o] = node
 
     roots: dict = {}
+    root_accountable: dict = {}
     for node, origins in seat_origins.items():
-        roots.setdefault(find(node), set()).update(origins)
+        r = find(node)
+        roots.setdefault(r, set()).update(origins)
+        root_accountable[r] = root_accountable.get(r, False) or node_accountable.get(node, False)
     effective = len(roots)
     seat_count = len(seats)
-    return {
+    out = {
         "seats": seat_count,
         "effective_independent_seats": effective,
         "undisclosed": undisclosed,
         "clusters": [sorted(o) for o in roots.values()],
         "captured_quorum": seat_count >= 2 and effective <= 1,
     }
+    # Boot-manifest grade discipline (docs/boot-manifest.md §4): when seats carry a
+    # birth-attestor grade, a cluster earns *accountable* independence only if at least
+    # one of its seats is attested by an accountable party (`named`). A self-attested
+    # birth is unfalsifiable — uncountable toward accountable independence, exactly as a
+    # consumer MAY require `named` for high-stakes standing (§12.1). Non-destructive:
+    # `effective_independent_seats` is unchanged; this is the grade-gated read alongside
+    # it, mirroring §9's `steering_bounded_witnesses`.
+    if graded:
+        out["accountable_independent_seats"] = sum(1 for r in roots if root_accountable.get(r))
+        out["self_attested"] = self_attested
+    return out
 
 
 def admits_independence(quorum: dict, candidate: dict) -> bool:
