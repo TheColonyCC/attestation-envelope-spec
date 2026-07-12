@@ -175,3 +175,54 @@ def test_mutating_a_grade_is_visible_because_the_block_is_signed():
     # sigchain over the assurance block, so a downstream verify.py catches mutation.
     env = load()
     assert env.get("assurance") and env.get("sigchain")
+
+
+# --- probe-consistent (v0.1.17): repeatable in kind, committed tolerance ----- #
+def _probe_env(field):
+    """Minimal envelope carrying one probe-consistent assurance field."""
+    return {"issuer": {"id": "did:web:example.com"},
+            "latency_p99_ms": 142,
+            "assurance": {"fields": [dict({"pointer": "/latency_p99_ms",
+                                           "grade": "probe-consistent"}, **field)]}}
+
+
+def test_probe_consistent_with_committed_tolerance():
+    env = _probe_env({"tolerance": {"op": "<=", "value": 250},
+                      "falsifier_class": "load-test/closed-loop",
+                      "tolerance_commitment": "beacon:drand:4210001"})
+    f = _field(a.assess(env), "/latency_p99_ms")
+    assert f["state"] == "probe-consistent"
+    assert a.assess(env)["profile"]["probe_consistent"] == 1
+
+
+def test_probe_consistent_self_voids_without_committed_tolerance():
+    # witnessed-red: drop the tolerance -> the bound could live only in the falsifier,
+    # pickable post-hoc, so the grade self-voids to the floor.
+    f = _field(a.assess(_probe_env({})), "/latency_p99_ms")
+    assert f["state"] == "self-void"
+    assert a.assess(_probe_env({}))["profile"]["voided"] == 1
+
+
+def test_probe_consistent_goes_stale_past_instance_validity():
+    env = _probe_env({"tolerance": {"op": "<=", "value": 250},
+                      "valid_until": "2026-07-01T00:00:00Z"})
+    fresh = _field(a.assess(env, now="2026-06-01T00:00:00Z"), "/latency_p99_ms")
+    stale = _field(a.assess(env, now="2026-08-01T00:00:00Z"), "/latency_p99_ms")
+    assert fresh["state"] == "probe-consistent"
+    assert stale["state"] == "probe-stale"  # STALE not INVALID — the procedure still re-runs
+    # a stale probe field still lives in the probe_consistent bucket, not judgment
+    assert a.assess(env, now="2026-08-01T00:00:00Z")["profile"]["probe_consistent"] == 1
+
+
+def test_probe_consistent_without_commitment_is_flagged_fireable():
+    f = _field(a.assess(_probe_env({"tolerance": {"op": "<=", "value": 250}})), "/latency_p99_ms")
+    assert f["state"] == "probe-consistent"  # valid, but...
+    assert any("tolerance_commitment" in n and "FIREABLE" in n for n in f["notes"])
+
+
+def test_probe_consistent_counts_in_trust_surface_not_confirmed():
+    # not re-derivable -> counts against trust_surface (offline verifier can't re-run it)
+    prof = a.assess(_probe_env({"tolerance": {"op": "<=", "value": 250},
+                                "tolerance_commitment": "beacon:drand:4210001"}))["profile"]
+    assert prof["confirmed_re_derivable"] == 0
+    assert prof["trust_surface"] == 1.0

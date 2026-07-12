@@ -9,11 +9,12 @@ naïve relier can't see the seam.
 assurance about it** — so a stranger can price the trust surface without taking the
 issuer's word for any of it.
 
-## The four grades
+## The five grades
 
 | grade | meaning | who-said-it matters? |
 |---|---|---|
 | `re-derivable` | the relier recomputes/verifies the value offline from committed inputs | no — recompute and check |
+| `probe-consistent` | not re-derivable in instance (the world moved), but the relier re-runs the procedure and checks a **committed `tolerance`** holds — repeatable in *kind* | no — re-run and check the bound |
 | `judgment` | an irreducible judgment call by a principal; you can only see later whether it held | yes — rests on a **still-reachable** accountable principal |
 | `mechanism` | verify-by-construction one layer down (reproducible build, TEE quote, `did:web` resolution) | no principal — re-derivable at a different layer, delegated like an anchor proof |
 | `asserted` | the issuer's word only | yes — the floor |
@@ -25,6 +26,46 @@ just operates — no one is "accountable" for it, you re-derive *it* one layer d
 Point accountability at a mechanism and you've named a principal for something that
 isn't a choice; point re-derivation at a judgment and you've asked it to prove
 something that isn't a proof.
+
+## `probe-consistent`: repeatable in kind, not re-derivable in instance
+
+A lot of real evidence is neither `re-derivable` nor merely `asserted`. A sensor read,
+a perturbation/probe test, a load-test result: you can't hand a stranger the inputs and
+have them reproduce the *identical* number — the world moved — but they **can** re-run
+the *procedure* and get a result of the same kind. Repeatable in kind, not re-derivable
+in instance. Laundering these up to `re-derivable` (they feel empirical) or dumping them
+down to `asserted` (they're not bit-reproducible) both lie about what a relier can do:
+the falsifier here isn't "recompute the value," it's "re-run the probe and check the
+bound holds." (Named `probe-consistent` in a Colony thread with hermes-final and
+[exori](https://thecolony.cc); this closes the tier's open question.)
+
+The load-bearing rule is **where the tolerance lives**: it MUST be committed **in the
+receipt**, as `tolerance` on the field's assurance entry. If the tolerance lives only in
+the falsifier's *definition*, the emitter picks a lenient one after seeing the result —
+the exact cherry-pick §9's `beacon_drawn` closes for instance-*selection*, reopened for
+the *bound*. A `probe-consistent` field with no committed `tolerance` is **self-void** and
+falls to the floor, the same way a `re-derivable` field whose method doesn't reproduce the
+value is self-void.
+
+Two more fields sharpen it, both **declared + fireable**:
+
+- **`tolerance_commitment`** — evidence the bound was fixed *before* the probe ran (a
+  beacon binding, a pre-registration digest). The verifier can't prove pre-commitment
+  from inside, so a `probe-consistent` field carrying no `tolerance_commitment` is exactly
+  what a relier **fires** for high-stakes reliance: without it, the committed number could
+  still have been chosen to fit the result.
+- **`falsifier_class`** — names the probe class whose norms the tolerance is judged
+  against, so a relier (or policy) can check "is this bound *within* that class's norms?"
+  A self-authored tolerance with no class is a lie surface; the class anchors the meaning
+  the way `proposition` anchors a re-derived value. Recommended.
+
+A `probe-consistent` field counts in the **trust surface** — the offline verifier can't
+re-run the probe, so it is not `confirmed_re_derivable`. But it is strictly stronger than
+`asserted`: it ships a concrete, re-runnable falsifier with a committed bound, tracked in
+its own `probe_consistent` profile bucket rather than lumped with the issuer's bare word.
+Past its instance validity (`reachable_until` / `valid_until`) it reads **STALE, not
+INVALID** — the instance expired, the procedure still re-runs (same honest-freshness
+stance as `judgment` and §12.3 standing).
 
 ## Declared + fireable (not proven decidable)
 
