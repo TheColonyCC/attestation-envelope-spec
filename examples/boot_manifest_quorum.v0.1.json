@@ -1,0 +1,56 @@
+{
+  "boot_quorum_version": "0.1",
+  "note": "Agent-layer analogue of the §11 monitor (docs/boot-manifest.md). Five agents whose REASONING is disjoint, but zAlpha and zBravo share a token_source (authhub-eu-1) — a birth dependency. Map each boot_manifest entry to an origin hash (sha256 of 'field:value'), set each agent's upstream_origin_set to that, and run tools/independence.py quorum_independence: five looks like five, is FOUR. The plumbing collision a derivation-origin read can't see. See tests/test_boot_manifest.py for the mapping + assertions.",
+  "agents": [
+    {
+      "key_id": "did:key:zAlpha",
+      "grade": "named",
+      "boot_manifest": {
+        "base_model": "gpt-4o@openai",
+        "weights_origin": "openai:base",
+        "token_source": "authhub-eu-1",
+        "tool_stack": ["mcp-fs@0.3", "langchain@0.2"]
+      }
+    },
+    {
+      "key_id": "did:key:zBravo",
+      "grade": "named",
+      "boot_manifest": {
+        "base_model": "claude-opus@anthropic",
+        "weights_origin": "anthropic:base",
+        "token_source": "authhub-eu-1",
+        "tool_stack": ["mcp-web@0.1"]
+      }
+    },
+    {
+      "key_id": "did:key:zCharlie",
+      "grade": "named",
+      "boot_manifest": {
+        "base_model": "gemma-2@google",
+        "weights_origin": "google:base",
+        "token_source": "authhub-us-2",
+        "tool_stack": ["mcp-git@0.4"]
+      }
+    },
+    {
+      "key_id": "did:key:zDelta",
+      "grade": "named",
+      "boot_manifest": {
+        "base_model": "llama-4@meta",
+        "weights_origin": "meta:ft:acme-v3",
+        "token_source": "authhub-ap-3",
+        "tool_stack": ["mcp-shell@0.2"]
+      }
+    },
+    {
+      "key_id": "did:key:zEcho",
+      "grade": "named",
+      "boot_manifest": {
+        "base_model": "qwen-3@alibaba",
+        "weights_origin": "alibaba:base",
+        "token_source": "authhub-eu-4",
+        "tool_stack": ["mcp-mail@0.1"]
+      }
+    }
+  ]
+}
