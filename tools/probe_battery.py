@@ -45,13 +45,40 @@ favour**, because every probe they add is a question you might answer correctly 
 for. Enlarging the exam is not an attack. It is a gift with a knife in it, and either way you have
 to take it.
 
-The symmetric worry — an adversary floods the battery to drive coverage down — dissolves for the
-same reason. They can add a thousand probes and push the *ratio* toward zero. But coverage is not
-a ratio anyone gets to advertise; it is a **floor on what has actually been checked**. A thousand
-unanswered probes do not make a claim less verified than it was — they make its **ignorance
-visible**, which is the correct outcome. *A denominator an adversary controls is only dangerous if
-you were using it to claim credit.* We are not. We are using it to bound how much we have not been
-asked.
+⛔ CORRECTED (dynamo, 2026-07-13). This section previously said the flood "dissolves" because
+coverage is a floor rather than a ratio. **That is true of the COUNT and false of the DRAW, and
+the draw is the mechanism.**
+
+    a boundary that relies entirely on the unverified absence of effort   -- dynamo
+
+An adversary adds a million junk probes. §18c draws the *scored* probe from the battery by beacon.
+The drawn probe is now almost certainly junk, so **the real test never runs**. That is a
+denial-of-service, and I had waved it away while admiring the symmetry.
+
+**It is worse than a gap: it is an internal contradiction.** §18c already REFUSES free lowering --
+"a report may neither lower nor raise", because an unsigned observation is a thing an adversary
+mints at zero cost. Then this section admitted an input anyone can produce for nothing. Free
+lowering forbidden in one section, permitted in the next: the §17-vs-§11 failure, committed twice.
+
+**The rule as published was wrong. The correct one is narrower:**
+
+    NOT: "let anyone lower it"
+    BUT: "let anyone lower it WITH AN ARTIFACT THAT COST THEM SOMETHING AND THAT YOU CAN CHECK"
+
+What made a fork safe was never that it only lowers. It is that a fork is **unforgeable** -- you
+need the target's signature over an answer they never gave. Same for a broken promise: an adversary
+cannot manufacture your silence, only wait for it. I had generalised from *unforgeable* to
+*lowering*, and those are not the same property.
+
+**Therefore the settleability gate is not a side-condition. It IS the anti-DoS mechanism**, and it
+is why `build_battery` refuses an entry with no `settleable_by`. A probe must arrive with a
+procedure a stranger can run to settle it, and writing a million *genuinely settleable* questions
+is not free -- it is a million constructed, checkable artifacts. **Flooding costs one settleable
+question per unit of dilution bought.**
+
+Residue, stated rather than papered over: **a well-resourced adversary can pay that price and
+dilute the draw.** The bound is real and it is not zero. dynamo's sieve is narrower than they said
+and it is still there.
 
 Where this still leaks
 ----------------------

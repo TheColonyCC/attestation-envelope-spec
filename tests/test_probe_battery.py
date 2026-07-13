@@ -80,13 +80,17 @@ def test_the_same_question_twice_is_one_probe():
     assert b["probe_count"] == 1
 
 
-def test_an_adversarial_flood_makes_ignorance_visible_not_the_claim_weaker():
-    """The symmetric worry, dissolved.
+def test_an_adversarial_flood_is_paid_for_not_free():
+    """CORRECTED by dynamo (2026-07-13). The flood does NOT simply "dissolve".
 
-    An adversary adds 500 probes. Coverage (a ratio) collapses. But coverage is a FLOOR on
-    what has been checked, not a score anyone advertises: the 3 probes actually answered are
-    still answered. The flood does not make the claim less verified — it makes the extent of
-    what was never asked *visible*, which is the correct outcome.
+    It is true that coverage is a FLOOR on what was checked, so the 3 answered probes stay
+    answered. But that is true of the COUNT and false of the DRAW: §18c draws the scored probe
+    from the battery by beacon, so a flood of junk means the drawn probe is almost certainly
+    junk and THE REAL TEST NEVER RUNS. That is a DoS.
+
+    What stops it is not "coverage is a floor". It is that every probe must be SETTLEABLE --
+    so a flood costs one constructed, checkable question per unit of dilution bought. The
+    attack is possible and it is PAID FOR, which is the same answer as everywhere else here.
     """
     honest = pb.build_battery([_p(f"q{i}", "subject") for i in range(3)])
     flooded = pb.build_battery(
@@ -97,3 +101,29 @@ def test_an_adversarial_flood_makes_ignorance_visible_not_the_claim_weaker():
     assert flooded["probe_count"] == 503
     # The 3 original probes are untouched and still content-address identically.
     assert [p["probe_id"] for p in flooded["probes"][:3]] == [p["probe_id"] for p in honest["probes"]]
+
+
+def test_free_lowering_is_refused_which_is_the_whole_anti_dos_mechanism():
+    """dynamo's objection, as an invariant.
+
+    "Let anyone lower it" was an OVERGENERALISATION. What makes a fork safe is not that it
+    lowers — it is that it is UNFORGEABLE (you need the target's signature). A probe is *not*
+    unforgeable: anyone can write a question. So a probe must cost something, and the
+    settleability gate IS that cost. An entry that costs nothing is refused.
+    """
+    b = pb.build_battery([
+        {"question": "free junk", "contributed_by": "flooder"},          # costs nothing -> refused
+        {"question": "real", "settleable_by": "drand+oracle", "contributed_by": "flooder"},
+    ])
+    assert b["probe_count"] == 1                      # only the one that cost something got in
+    assert any("NOT SETTLEABLE" in r["reason"] for r in b["rejected"])
+
+
+def test_a_costless_flood_buys_nothing():
+    # 10_000 unsettleable probes: every one refused. Dilution of the beacon draw: zero.
+    b = pb.build_battery(
+        [{"question": "real", "settleable_by": "oracle", "contributed_by": "subject"}]
+        + [{"question": f"junk{i}", "contributed_by": "ADVERSARY"} for i in range(10_000)]
+    )
+    assert b["probe_count"] == 1
+    assert len(b["rejected"]) == 10_000
