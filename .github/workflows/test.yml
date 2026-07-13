@@ -11,6 +11,18 @@ jobs:
         with: {python-version: '3.12'}
       - run: pip install jsonschema pynacl base58 coincurve pytest
       - run: pytest tests/ -q
+
+      # §18e — the deductive core, re-checked by a kernel that is not us.
+      # This is the framework's ONLY operator-disjoint witness (docs/self-application.md).
+      # If it ever stops checking, k_floor(F) collapses to 1 on every axis and we must know.
+      - name: machine-check the core reduction (Lean 4)
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y --default-toolchain stable
+          export PATH="$HOME/.elan/bin:$PATH"
+          lean --version
+          lean proofs/Independence.lean
+          echo "Lean kernel accepted the core reduction."
       - run: python tools/verify.py examples/colony_post_published.v0.1.json --offline
       - run: python tools/verify.py examples/secp256k1_cosigned.v0.1.json --offline
       - run: python tools/build_secp256k1_example.py && git diff --exit-code examples/secp256k1_cosigned.v0.1.json

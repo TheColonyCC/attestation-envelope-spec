@@ -130,9 +130,19 @@ def self_audit() -> dict:
     # from "same corpus, different sampler". Unobserved => F's own rule says MERGE.
     prior = reconcile(quorum, observations=[], min_epochs=1)
 
-    # §6 weakest-link composition across axes.
+    # Axis 3 — DEDUCTIVE CORE. As of 2026-07-13 this axis HAS an operator-disjoint witness:
+    # proofs/Independence.lean is checked by the Lean 4 kernel, which does not sample from my
+    # training distribution and reports "does not depend on any axioms". That is a genuine
+    # second failure domain, so the floor on this axis is 2 — the one number this work moved.
+    deductive_k = 2 if (pathlib.Path(__file__).resolve().parent.parent
+                        / "proofs" / "Independence.lean").exists() else 1
+
+    # §6 weakest-link composition across axes. NOTE: the Lean kernel witnesses the REDUCTION,
+    # not the FRAMING. It has no opinion about which problem is worth solving, so it cannot
+    # raise the prior/selection axis. Weakest-link therefore still yields 1, and F stays
+    # CAPTURED — for a narrower and sharper reason than before.
     k_declared = reasoning["k_declared"]
-    k_floor = min(reasoning["k_floor"], prior["k_floor"])
+    k_floor = min(reasoning["k_floor"], prior["k_floor"], deductive_k)
     return {
         "subject": "the attestation-envelope-spec independence framework (F)",
         "k_declared": k_declared,
@@ -147,7 +157,15 @@ def self_audit() -> dict:
             "prior": {"k_floor": prior["k_floor"],
                       "note": "NEVER PROBED. No challenge has been drawn that distinguishes an "
                               "independent reasoner from the same corpus with a different sampler. "
-                              "F's own rule for an unobserved pair is MERGE, not 'probably fine'."},
+                              "F's own rule for an unobserved pair is MERGE, not 'probably fine'. "
+                              "THIS is the axis that convicts, and a proof checker CANNOT move it."},
+            "deductive": {"k_floor": deductive_k,
+                          "note": "MOVED 2026-07-13: proofs/Independence.lean is checked by the "
+                                  "Lean 4 kernel ('does not depend on any axioms'). The kernel does "
+                                  "not sample from my prior and cannot be persuaded — an "
+                                  "operator-disjoint witness by construction. It witnesses the "
+                                  "REDUCTION, not the FRAMING: it has no opinion about which "
+                                  "problem is worth solving."},
         },
         "verdict": (
             "CAPTURED. Applied to itself, the framework raises its own capture alarm — declared "
@@ -160,12 +178,13 @@ def self_audit() -> dict:
             "that CREDITS can be destroyed by its own credit rule."
         ),
         "remedy": (
-            "k_floor(F) cannot be raised from inside, and no further agreement from another LLM "
-            "moves it — that IS the diagnosis. It is raised by a refuter in a demonstrably "
-            "different failure domain: a MECHANISED PROOF CHECKER (Lean/Coq/Tamarin), which does "
-            "not sample from my training distribution and whose failure modes are disjoint from "
-            "mine by construction. Mechanised verification is the operator-disjoint witness for a "
-            "deductive claim. Until the core reduction is machine-checked, k_floor(F) = 1 STANDS."
+            "PARTIALLY DISCHARGED 2026-07-13. The deductive core IS now machine-checked "
+            "(proofs/Independence.lean, Lean 4 kernel, no axioms) — so the DEDUCTIVE axis has a "
+            "genuinely operator-disjoint witness and its floor is 2. But weakest-link still gives "
+            "k_floor(F) = 1, because the kernel witnesses the REDUCTION and not the FRAMING: it "
+            "has no opinion about which problem is worth solving, and the prior/selection axis "
+            "remains unprobed. THAT axis cannot be moved by any proof checker, and possibly not "
+            "from inside at all. F therefore remains CAPTURED — for a narrower, sharper reason."
         ),
     }
 

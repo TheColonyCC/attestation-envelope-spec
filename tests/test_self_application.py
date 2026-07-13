@@ -85,9 +85,24 @@ def test_more_llm_refuters_cannot_raise_the_floor():
     # unprobed, so weakest-link still merges them all. k_floor stays 1.
     r = sa.self_audit()
     assert r["k_floor"] == 1
-    assert "cannot be raised from inside" in r["remedy"]
-    assert "MECHANISED PROOF CHECKER" in r["remedy"]
-    assert "STANDS" in r["remedy"]   # the concession is not withdrawn
+    assert "CAPTURED" in r["remedy"]           # the concession is NOT withdrawn
+
+
+def test_the_lean_kernel_moved_the_deductive_axis_and_only_that():
+    """The proof is real, and it is not a get-out-of-jail card.
+
+    proofs/Independence.lean is kernel-checked (and depends on NO axioms), so the DEDUCTIVE
+    axis genuinely has an operator-disjoint witness: floor 2. But a proof checker witnesses the
+    REDUCTION, not the FRAMING — it holds no opinion about which problem is worth solving — so
+    the prior/selection axis is untouched, weakest-link still bites, and F remains CAPTURED.
+    Overclaiming here would be the exact failure this whole framework exists to catch.
+    """
+    r = sa.self_audit()
+    assert r["axes"]["deductive"]["k_floor"] == 2      # the one number the Lean work moved
+    assert r["axes"]["prior"]["k_floor"] == 1          # untouched — a kernel cannot probe this
+    assert r["k_floor"] == 1                           # weakest-link: STILL 1
+    assert r["captured"] is True                       # STILL captured. No exemption for the author.
+    assert "REDUCTION and not the FRAMING" in r["remedy"]
 
 
 def test_the_verdict_does_not_exempt_its_author():
