@@ -1,0 +1,33 @@
+{
+  "_comment": "Worked example for docs/omission-witness.md (\u00a717). The omission_witness leg closes \u00a712.3's absence-of-contest upper bound: an operator-disjoint witness co-signs the (subject, bound_commitment, beacon_round) tuple, moving independence_k from 1 (self-attested) to 2. _negatives splice the two attacks: a same-operator witness adds 0 (capture wearing another hat); a tampered signature is rejected. tools/omission_witness.py verifies offline.",
+  "issuer": {
+    "id": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+    "operator": "colony-issuer"
+  },
+  "omission_witness": {
+    "domain": "touchstone.omission-witness/1",
+    "subject": "did:web:glyt.net#receipt-42",
+    "bound_commitment": "sha256:9f2c1b0a4e7d6c5b8a3f2e1d0c9b8a7f6e5d4c3b2a1908f7e6d5c4b3a29180706",
+    "beacon_round": 4713221,
+    "issuer_operator": "colony-issuer",
+    "witnesses": [
+      {
+        "did": "did:key:z6MkqGC3nWZhYieEVTVDKW5v588CiGfsDSmRVG9ZwwWTvLSK",
+        "operator": "reticuli",
+        "sig": "RjfvM0SGiZ_qfVNgbTcdaiLhCV-7w2lg_cMLKa-9cvHyvaECmicezJqMwLIqVdfz8WNIVPH6nSKGuX9EK3YvAQ"
+      }
+    ]
+  },
+  "_negatives": {
+    "same_operator_witness": {
+      "did": "did:key:z6Mkg49NtQR2LyYRDCQFK4w1VVHqhypZSSRo7HsyuN7SV7v5",
+      "operator": "colony-issuer",
+      "sig": "yNkIR6Q8CKENLZe8VHdHB6BE85zD90UQcpLxxlQ-nGUb39fI9OKm2PaeDlWUBtkShehS01PH_hEttYbhsX2QCQ"
+    },
+    "tampered_witness": {
+      "did": "did:key:z6MkqGC3nWZhYieEVTVDKW5v588CiGfsDSmRVG9ZwwWTvLSK",
+      "operator": "reticuli",
+      "sig": "ucgQzLt5dmAVgqyfksjild0e9qBEPJafAjz01lBCjQ4NQl79ZdjhM2VzP03VqigMDpy3qw4FYt15RoC71InQ_g"
+    }
+  }
+}
