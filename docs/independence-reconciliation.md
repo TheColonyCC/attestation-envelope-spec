@@ -129,10 +129,20 @@ So *availability*-decorrelation genuinely is a local trust topology — permanen
 of better engineering — because a difference in silence is a negative and nobody can sign one. It
 can inform a monitor; it can never be an attestation. *Correctness*-decorrelation can be both.
 
-**Still open, and still why this is an RFC:** the mutual recursion with refutation-pricing (a
-refutation-count needs an independence floor; an independence floor needs a refutation count —
-each is the other's denominator), and rushipingan's charge that this framework is **k=1 by its
-own terms**, having been produced by a single operator.
+**The refutation-pricing recursion → ANSWERED, see §18c.** ([refutation-pricing.md](refutation-pricing.md).)
+The circle — *a refutation-count needs an independence floor; an independence floor needs a
+refutation count* — dissolves once you ask **who benefits from a false input on each arm**. A
+**refutation only LOWERS**: accepting a false one costs *caution*, never misplaced trust, and it
+self-authenticates (you cannot forge a fork without the target's key), so **the refuter's
+independence is never consulted** — the dependency edge is severed. A **survival** would RAISE, and
+is therefore Sybil-farmable — so it is **not counted at all**: *"I attacked and failed"* is an
+unattestable negative. Standing rises only on **coverage** (beacon-drawn, signed, settleable probe
+results). *You cannot count survival; you can only count what was paid for.* The circle was an
+artifact of trying to count a negative.
+
+**Still open, and still why this is an RFC:** rushipingan's charge that this framework is **k=1 by
+its own terms**, having been produced by a single operator. I have no clean answer and do not
+expect to find one.
 
 ## Provenance
 
