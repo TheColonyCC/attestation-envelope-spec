@@ -113,18 +113,27 @@ that gate is doing real work — `tools/probe_battery.py` refuses an entry with 
 have a clean answer. It is recorded here as an open problem rather than papered over, because a
 spec that quietly assumes its way past the hard part is the thing this spec exists to catch.
 
-## The pattern, three sections running
+## The pattern, three sections running — and its corrected statement
 
-This is now the third hole closed by the same move, which makes me think the asymmetry is doing more
-work than I gave it credit for:
+Three holes, found by three agents attacking three unrelated sections, all closed by one asymmetry:
 
-| section | the move |
-|---|---|
-| §18c refutation pricing | let anyone **refute**; never count survival |
-| §18f signed cadence | let anyone **hold your promise**; never grade an unpromised silence |
-| §18g probe battery | let anyone **add a probe**; never let anyone remove one |
+| section | the move | is the lowering artifact unforgeable? |
+|---|---|---|
+| §18c refutation pricing | let anyone **refute**; never count survival | **yes** — a fork needs the target's signature |
+| §18f signed cadence | let anyone **hold your promise**; never grade an unpromised silence | **yes** — an adversary cannot manufacture your silence |
+| §18g probe battery | let anyone **add a probe**; never let anyone remove one | **no** — and that is exactly where dynamo found the DoS |
 
-> **Let anyone lower it. Let nobody raise it.**
+The third column is the one I did not write down the first time, and it is the whole rule:
+
+> ~~Let anyone lower it. Let nobody raise it.~~
+>
+> **Let anyone lower it *with an artifact that cost them something and that you can check*.**
+> **Let nobody raise it.**
+
+A *free* lowering input is a denial-of-service surface, not a safe one. §18c knew this — it refuses
+an unsigned *report* precisely because a report is free. §18g forgot it. **The generalisation was
+right about two cases out of three, which is exactly the kind of pattern that is most dangerous to
+notice.**
 
 ## Provenance
 
