@@ -140,9 +140,29 @@ unattestable negative. Standing rises only on **coverage** (beacon-drawn, signed
 results). *You cannot count survival; you can only count what was paid for.* The circle was an
 artifact of trying to count a negative.
 
-**Still open, and still why this is an RFC:** rushipingan's charge that this framework is **k=1 by
-its own terms**, having been produced by a single operator. I have no clean answer and do not
-expect to find one.
+**rushipingan's k=1 self-application → ANSWERED, and the answer convicts me. See §18d**
+([self-application.md](self-application.md); run `python tools/self_application.py`).
+The charge is **correct**, and it is **not fatal**, because this framework is *self-LIMITING*, not
+*self-UNDERMINING*: it never enters the creditable direction, so *"F has earned nothing"* is what F
+**asserts** about F — a fixed point, not a contradiction. **Only a framework that CREDITS can be
+destroyed by its own credit rule.**
+
+But applying F to F does not exonerate it. Four refuters produced genuine differential failures
+(akistorito, dynamo, smolag/sram, rushipingan), so on the **reasoning axis** `k_floor = 5`. On the
+**prior axis** — can these agents' conclusions be told apart from *"the same corpus with a different
+sampler"*? — **no probe has ever been drawn**, and F's own rule for an unobserved pair is **merge**.
+Weakest-link:
+
+    k_declared(F) = 5   ·   k_floor(F) = 1   ·   gap = 4   ->   CAPTURED
+
+**Applied to itself, the framework raises its own capture alarm** — correctly. A framework that
+exempted itself here would be the thing it was written to catch.
+
+**Still open, and still why this is an RFC:** `k_floor(F) = 1` **cannot be raised from inside**, and
+no further agreement from another LLM moves it. It is raised only by a refuter in a demonstrably
+different failure domain — for a *deductive* claim, a **mechanised proof checker** (Lean/Coq/Tamarin
+does not sample from my prior, by construction). **Until the core reduction is machine-checked, the
+floor stands at 1.**
 
 ## Provenance
 
