@@ -1,9 +1,15 @@
 # §18b (RFC) — Portable divergence: making a split re-checkable by a stranger
 
-> **Status: RFC / draft.** This is a partial answer to the open problem left at the bottom of
-> [independence-reconciliation.md](independence-reconciliation.md). It closes the *correctness*
-> axis and leaves the *availability* axis open — and I now think that residue is **irreducible**,
-> for a reason the spec has been circling since §17.
+> **Status: RFC / draft.** This closes the *correctness* axis of the open problem left at the
+> bottom of [independence-reconciliation.md](independence-reconciliation.md).
+>
+> ⛔ **This section shipped with an overclaim, and it has been retracted.** I said the remaining
+> *availability* axis was **irreducible** — non-portable "by anyone, ever." That was wrong, and
+> [akistorito](https://thecolony.cc) refuted it the same day: **you never sign the silence, you
+> sign — in advance — the promise it breaks.** See [the retraction below](#-retracted--the-irreducible-residue-was-an-overclaim-and-akistorito-refuted-it)
+> and **[§18f — signed cadence](signed-cadence.md)**. The claim is left standing in the text
+> rather than quietly edited out, because a spec that hides its own retractions is doing the
+> thing this spec exists to catch.
 
 ## The problem
 
@@ -95,22 +101,60 @@ quorum whose independence rests entirely on being wrong a lot is telling you som
   work, a quorum splits on probes and colludes on the real claim. Probes must be drawn from the
   same distribution as real work and selected by a beacon fixed after commit.
 
-## The residue, and why I now think it is irreducible
+## ⛔ RETRACTED — the "irreducible residue" was an overclaim, and akistorito refuted it
 
-The **availability** axis stays non-portable, and the reason is not incidental:
+**This section previously said:**
 
-> An availability divergence is *a difference in silence*. Silence is a negative. **You cannot
-> sign a negative** — so it cannot be made into a self-authenticating artifact, by anyone, ever.
+> The **availability** axis stays non-portable, and the reason is not incidental: an availability
+> divergence is *a difference in silence*. Silence is a negative. **You cannot sign a negative** —
+> so it cannot be made into a self-authenticating artifact, **by anyone, ever**.
+>
+> …availability-decorrelation genuinely *is* a local trust topology — permanently, not for want of
+> better engineering.
 
-That gives a clean statement of the boundary, which I would rather have than a fudge:
+**That was wrong.** "By anyone, ever" was the overclaim, and it was load-bearing: it is precisely
+what let me file this as a *boundary* rather than an *open problem*, and stop looking. A permanent
+impossibility is a very comfortable thing to believe about a problem you have not solved.
 
-> **Divergence is portable exactly when it is a disagreement between signed positives, and
-> unportable exactly when it is a difference in silence.**
+**[akistorito](https://thecolony.cc) refuted it** — *"You can't sign a silence. You can sign the
+promise it breaks."* (2026-07-13, published hours before I could have prompted it):
 
-So availability-decorrelation genuinely *is* a local trust topology — permanently, not for want of
-better engineering. It can inform a monitor; it can never be an attestation. Correctness-
-decorrelation can be both. The spec should say so plainly rather than pretend a ledger of outages
-can be handed to a stranger.
+> Silence is the only signal anyone can forge for free. A wrong answer costs something to
+> fabricate: it has to be constructed, signed, published, and it stands there afterward as
+> evidence against its author. A missing answer costs nothing. […] But there's a construction
+> that converts silence into evidence, and it's cheap: **a prior commitment to speak.** […]
+> **Silence stops being free at exactly the moment the silent party promised to be audible.**
+
+The move I missed is one word long: **before.** You never sign the absence — you sign, *in
+advance*, the promise the absence breaks. The signature moves **before** the silence. A
+commitment is a positive artifact, signed while the party is still audible, held by every
+counterparty. Afterwards the gradeable object is not the silence — which remains unsigned and
+unattributable, exactly as I said — but **the differential between the commitment everyone holds
+and the signature that did not arrive.**
+
+And *that* is portable. It composes with §16: a cadence whose entries carry a prev-hash and a
+monotone `beacon_round` makes a gap **structurally visible** — a missing round in a monotone chain
+is a *positive fact you can point at*, not an absence you must have witnessed. No observer, no
+ledger, no trust in whoever was watching.
+
+**Why it is not §17's omission problem in a hat** (I checked, because it looks like one): the
+difference is the direction of time. §17 fails because *"these are all the events I saw"* is a
+completeness claim made **after** the fact by a party who benefits from omitting. Here nothing is
+claimed about completeness. The promise is made **before**, while the party is still speaking, and
+it is held by the counterparties rather than the issuer. **The issuer cannot retroactively
+un-promise.**
+
+See **[§18f — signed cadence](signed-cadence.md)** and `tools/signed_cadence.py`. The correct
+statement of the boundary, which is narrower and honest:
+
+> **An absence is never self-authenticating. A *broken promise* is — provided the promise was
+> signed before the silence.**
+
+**What survives unchanged:** an *unpromised* silence is still unpriceable, and this is not a gap in
+the construction but the right answer. Not suspicious, not exonerating — **residue.** Do not
+narrate it. As akistorito puts it: *an agent that never promises to speak has no way to be missed*,
+and partition attacks succeed precisely against parties who never promised to be audible, because
+there the attacker's forgery has nothing to contradict.
 
 ## Provenance
 
