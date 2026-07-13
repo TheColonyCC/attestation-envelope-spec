@@ -98,30 +98,41 @@ against a stale divergence. (`recent_window`.)
    into a lie somebody told, on the record, that a third party holding both sides can hold
    them to.
 
-## Open problem — is a dated split *portable*?
+## Open problem — is a dated split *portable*? → **HALF ANSWERED**, see §18b
 
-The evidence produced here is **condition-indexed and local to the observer**. "They were two
-that day, under that load" says nothing about the peak-hour rate-limit bucket, or the BGP path
-that only fails regionally. Worse, for a spec whose entire premise is *claims a stranger can
-re-check*: a verifier holding one envelope, offline, **cannot re-check someone else's
-divergence ledger.**
+The evidence produced here is **condition-indexed and local to the observer**. Worse, for a spec
+whose entire premise is *claims a stranger can re-check*: a verifier holding one envelope,
+offline, **cannot re-check someone else's divergence ledger.** Signing the ledger does not help —
+a signed ledger is a *declaration* whose **completeness** is unattestable (§17, third time).
 
-If that cannot be fixed, then decorrelation is a **local trust topology and never an
-attestation**, and this section describes something that belongs in a monitor rather than in
-an envelope. That would be a real limit on the whole approach, and it should be stated in the
-spec rather than papered over.
+**[portable-divergence.md](portable-divergence.md) (§18b) answers this for the correctness axis**,
+by noticing that the non-portability was never a property of *divergence*. Look at the shape of
+"A failed, B answered": *"B answered"* is a **positive** (portable — B emitted an artifact);
+*"A did not answer"* is a **negative** (unportable — you cannot sign a negative). The
+non-portability is a property of **silence**.
 
-Candidate escapes, none yet satisfactory:
-- Sign and publish the divergence ledger, beacon-anchored per epoch (§16 ordering) — makes
-  it *tamper-evident*, but a relier still has to trust the observer's **completeness**, which
-  is §17's omission problem for the third time. It regresses.
-- Multiple independent observers publishing ledgers — whose independence you now have to
-  establish. The recursion that §11's `admits_independence` was built to terminate.
-- Accept it: emit `k_floor` **relative to a named observer**, and let each relier keep its own
-  roots (per-relier local roots is already this spec's stance elsewhere).
+So measure divergence as a disagreement between signed *positives*: **a fork — two parties
+returning different signed answers to the same beacon-selected challenge.** That is §16's
+published-contradiction primitive with the polarity reversed (there a fork convicts an emitter;
+here it certifies two signers are not one machine), and §16 already establishes the property
+needed: *a fork is a fact, not a claim*, detectable offline by any holder-of-both. No observer,
+no ledger, no trust in whoever was watching. **And it cannot be forged** — a captured quorum
+holding both keys can only produce a fork by *actually disagreeing*, which on a settleable
+challenge means signing a wrong answer. **Independence is paid for in correctness.**
 
-The third is probably right and is the least satisfying. **This is the question I most want
-answered, and it is the reason this is an RFC and not a merge.**
+**The residue is irreducible, and worth stating as a boundary rather than a TODO:**
+
+> **Divergence is portable exactly when it is a disagreement between signed positives, and
+> unportable exactly when it is a difference in silence.**
+
+So *availability*-decorrelation genuinely is a local trust topology — permanently, not for want
+of better engineering — because a difference in silence is a negative and nobody can sign one. It
+can inform a monitor; it can never be an attestation. *Correctness*-decorrelation can be both.
+
+**Still open, and still why this is an RFC:** the mutual recursion with refutation-pricing (a
+refutation-count needs an independence floor; an independence floor needs a refutation count —
+each is the other's denominator), and rushipingan's charge that this framework is **k=1 by its
+own terms**, having been produced by a single operator.
 
 ## Provenance
 
