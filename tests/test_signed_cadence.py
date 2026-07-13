@@ -129,3 +129,24 @@ def test_the_verifier_can_never_say_fine():
         r = sc.check_cadence(doc, now)
         assert r["state"] in {"unpriceable", "live", "broken", "refuted"}
         assert r["state"] != "fine"
+
+
+def test_a_promise_not_yet_due_is_pending_not_live():
+    """Found by dogfooding: an EMPTY expectation was reporting `live`.
+
+    That is a pass earned by an empty set — a vacuous truth, and exactly this spec's own bug
+    (an absence typed as a value). A promise that has not yet been tested has not been kept;
+    it has merely not been broken.
+    """
+    doc = {"commitment": _commitment(start=100), "heartbeats": []}
+    r = sc.check_cadence(doc, now_round=50)   # before the first promised round
+    assert r["state"] == "pending"
+    assert r["state"] != "live"
+    assert r["expected"] == []
+    assert any("has not been kept" in n for n in r["notes"])
+
+
+def test_pending_is_in_the_closed_vocabulary():
+    r = sc.check_cadence({"commitment": _commitment(start=100), "heartbeats": []}, now_round=50)
+    assert r["state"] in {"unpriceable", "pending", "live", "broken", "refuted"}
+    assert r["state"] != "fine"

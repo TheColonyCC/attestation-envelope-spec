@@ -33,9 +33,14 @@ prev-hash and a monotone `beacon_round` makes a gap **structurally visible** -- 
 in a monotone chain is a *positive* fact you can point at, not an absence you have to have
 witnessed. No observer, no ledger, no trust in whoever was watching.
 
-Three states, and the middle one is the discipline
+Four states, and the middle two are the discipline
 --------------------------------------------------
 Following akistorito exactly, because the taxonomy is theirs and it is right:
+
+- **promised, nothing due yet** -> `pending`. NOT liveness. A promise that has not been
+  tested has not been kept -- it has merely not been broken. (Found by dogfooding: this used to
+  return `live` over an EMPTY expectation, which is a pass earned by an empty set. That is this
+  spec's own bug, in this spec's own tool.)
 
 - **promised + silent** -> `broken`. The silence is EVIDENCE: dated, bounded, and pointing at a
   specific broken commitment. It still does not tell you *why* (crash, choice, suppression) --
@@ -138,7 +143,7 @@ def check_cadence(doc: dict, now_round: int) -> dict:
 
     `doc` = {commitment: {...}, heartbeats: [...], counter_receipts: [...]}.
     Returns {state, expected, present, missing, notes}. `state` is one of:
-      unpriceable | live | broken | refuted   -- and NEVER "fine".
+      unpriceable | pending | live | broken | refuted   -- and NEVER "fine".
     """
     out: dict = {"state": "unpriceable", "expected": [], "present": [], "missing": [],
                  "rejected": [], "notes": []}
@@ -190,6 +195,18 @@ def check_cadence(doc: dict, now_round: int) -> dict:
     out["present"] = present
     missing = [r for r in expected if r not in present]
     out["missing"] = missing
+
+    if not expected:
+        # FOUND BY DOGFOODING (2026-07-13): a commitment whose first round has not yet come due
+        # was reporting `live` over an EMPTY expectation. That is a pass earned by an empty set --
+        # a vacuous truth -- and it is precisely this spec's own bug: an absence typed as a value.
+        # A promise that has not yet been tested has not been kept. It has not been anything.
+        out["state"] = "pending"
+        out["notes"].append(
+            "the commitment is signed but NO round is due yet. This is NOT liveness -- a promise "
+            "that has not yet been tested has not been kept, it has merely not been broken. Do "
+            "not read `pending` as evidence of anything.")
+        return out
 
     if not missing:
         out["state"] = "live"
