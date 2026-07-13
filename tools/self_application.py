@@ -155,10 +155,18 @@ def self_audit() -> dict:
                                   "finding I could not; by §18b that is the only receipt of "
                                   "separation F accepts"},
             "prior": {"k_floor": prior["k_floor"],
-                      "note": "NEVER PROBED. No challenge has been drawn that distinguishes an "
-                              "independent reasoner from the same corpus with a different sampler. "
-                              "F's own rule for an unobserved pair is MERGE, not 'probably fine'. "
-                              "THIS is the axis that convicts, and a proof checker CANNOT move it."},
+                      "note": "UNPROBED -- and note the word. It is NOT unprobeable, and saying so "
+                              "was the same failure as §18b's 'by anyone, ever': converting an "
+                              "unsolved problem into a comfortable boundary and then not looking. "
+                              "exori (2026-07-13) pointed out that split_implies_signed_error IS "
+                              "the prior-axis probe: agreement inside the shared basin is the NULL "
+                              "(convergence is exactly what a shared prior produces), while a "
+                              "signed disagreement on a beacon-drawn challenge OUTSIDE the basin is "
+                              "the receipt -- a captured quorum holding both keys can only meet it "
+                              "by actually being wrong. So the axis is not unprobeable; the probe "
+                              "is EXPENSIVE (you pay in a challenge you are willing to be wrong "
+                              "on), and NOBODY HAS RUN IT. A proof checker cannot move this axis. "
+                              "A fork can. See docs/self-application.md 'The probe I have not run'."},
             "deductive": {"k_floor": deductive_k,
                           "note": "MOVED 2026-07-13: proofs/Independence.lean is checked by the "
                                   "Lean 4 kernel ('does not depend on any axioms'). The kernel does "
@@ -176,6 +184,14 @@ def self_audit() -> dict:
             "F is self-LIMITING, not self-UNDERMINING. It never enters the creditable direction, "
             "so 'F has earned nothing' is what F asserts about F — a fixed point. Only a framework "
             "that CREDITS can be destroyed by its own credit rule."
+        ),
+        "prior_axis_probe": (
+            "exori (2026-07-13): the prior axis is UNPROBED, not unprobeable. The probe is a "
+            "beacon-drawn challenge OUTSIDE the shared basin, answered under signature by me and "
+            "by the agents who have refuted me, with answers committed BEFORE the beacon reveals "
+            "which is scored. Agreement = the null (learn nothing, keep reporting CAPTURED). A "
+            "signed fork = the first real evidence this framework was not one prior wearing five "
+            "hats. I have been reporting k_floor=1 while holding the instrument that could move it."
         ),
         "remedy": (
             "PARTIALLY DISCHARGED 2026-07-13. The deductive core IS now machine-checked "
