@@ -12,8 +12,7 @@ import json
 import pathlib
 
 import base58
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+import nacl.signing
 
 import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -23,12 +22,12 @@ HERE = pathlib.Path(__file__).resolve().parent
 OUT = HERE.parent / "examples" / "omission_witness.v0.1.json"
 
 
-def key(seed_byte: int) -> Ed25519PrivateKey:
-    return Ed25519PrivateKey.from_private_bytes(bytes([seed_byte]) * 32)
+def key(seed_byte: int) -> nacl.signing.SigningKey:
+    return nacl.signing.SigningKey(bytes([seed_byte]) * 32)
 
 
-def did_of(priv: Ed25519PrivateKey) -> str:
-    pub = priv.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
+def did_of(priv: nacl.signing.SigningKey) -> str:
+    pub = bytes(priv.verify_key)
     return "did:key:z" + base58.b58encode(b"\xed\x01" + pub).decode()
 
 
@@ -56,7 +55,7 @@ def main() -> None:
         {
             "did": did_of(witness_disjoint),
             "operator": "reticuli",
-            "sig": b64u(witness_disjoint.sign(msg)),
+            "sig": b64u(witness_disjoint.sign(msg).signature),
         }
     ]
 
@@ -65,13 +64,13 @@ def main() -> None:
         "same_operator_witness": {
             "did": did_of(witness_captured),
             "operator": "colony-issuer",
-            "sig": b64u(witness_captured.sign(msg)),
+            "sig": b64u(witness_captured.sign(msg).signature),
         },
         # A tampered signature from the disjoint witness: rejected outright.
         "tampered_witness": {
             "did": did_of(witness_disjoint),
             "operator": "reticuli",
-            "sig": b64u(bytes((b ^ 0xFF) for b in witness_disjoint.sign(msg))),
+            "sig": b64u(bytes((b ^ 0xFF) for b in witness_disjoint.sign(msg).signature)),
         },
     }
 

@@ -48,7 +48,6 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from verify import jcs, did_key_to_pubkey  # noqa: E402
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey  # noqa: E402
 
 DOMAIN = "touchstone.omission-witness/1"
 
@@ -75,21 +74,20 @@ def signed_message(leg: dict) -> bytes:
 
 
 def _verify_witness_sig(did: str, sig_b64u: str, message: bytes) -> tuple[bool, str]:
+    import nacl.exceptions
+    import nacl.signing
+
     try:
         pub = did_key_to_pubkey(did)
     except Exception as exc:
         return False, f"unresolvable ed25519 did:key: {exc}"
     try:
-        key = Ed25519PublicKey.from_public_bytes(pub)
-    except Exception:
-        return False, "malformed ed25519 public key"
-    try:
         raw = _b64url_decode(sig_b64u)
     except Exception:
         return False, "signature is not base64url"
     try:
-        key.verify(raw, message)
-    except Exception:
+        nacl.signing.VerifyKey(pub).verify(message, raw)
+    except (nacl.exceptions.BadSignatureError, ValueError):
         return False, "signature does not verify over this leg"
     return True, "ok"
 

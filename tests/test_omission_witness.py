@@ -13,8 +13,7 @@ import pathlib
 import sys
 
 import base58
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+import nacl.signing
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "tools"))
 import omission_witness as ow  # noqa: E402
@@ -22,12 +21,12 @@ import omission_witness as ow  # noqa: E402
 EXAMPLE = pathlib.Path(__file__).resolve().parent.parent / "examples" / "omission_witness.v0.1.json"
 
 
-def _key(seed: int) -> Ed25519PrivateKey:
-    return Ed25519PrivateKey.from_private_bytes(bytes([seed]) * 32)
+def _key(seed: int) -> nacl.signing.SigningKey:
+    return nacl.signing.SigningKey(bytes([seed]) * 32)
 
 
-def _did(priv: Ed25519PrivateKey) -> str:
-    pub = priv.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
+def _did(priv: nacl.signing.SigningKey) -> str:
+    pub = bytes(priv.verify_key)
     return "did:key:z" + base58.b58encode(b"\xed\x01" + pub).decode()
 
 
@@ -48,7 +47,7 @@ def _leg(issuer_operator="colony-issuer", subject="s:1", bc="sha256:aa", br=42):
 
 def _witness(leg, seed, operator):
     priv = _key(seed)
-    return {"did": _did(priv), "operator": operator, "sig": _b64u(priv.sign(ow.signed_message(leg)))}
+    return {"did": _did(priv), "operator": operator, "sig": _b64u(priv.sign(ow.signed_message(leg)).signature)}
 
 
 def test_no_witnesses_is_self_attested():
