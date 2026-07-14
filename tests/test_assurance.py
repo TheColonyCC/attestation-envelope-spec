@@ -13,8 +13,8 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "tools")
 import assurance as a  # noqa: E402
 
 EXAMPLE = pathlib.Path(__file__).resolve().parent.parent / "examples" / "assurance_graded.v0.1.json"
-NOTE_PTR = "/extensions/https:~1~1thecolony.cc~1x~1assurance-demo/note_sha256"
-RISK_PTR = "/extensions/https:~1~1thecolony.cc~1x~1assurance-demo/risk_level"
+NOTE_PTR = "/extensions/https:~1~1thecolony.ai~1x~1assurance-demo/note_sha256"
+RISK_PTR = "/extensions/https:~1~1thecolony.ai~1x~1assurance-demo/risk_level"
 
 
 def load():
@@ -43,7 +43,7 @@ def test_re_derivable_field_is_confirmed_offline():
 def test_re_derivable_self_voids_when_it_does_not_reproduce():
     env = load()
     # mutate the input so the declared sha256-utf8 method no longer reproduces the value
-    env["extensions"]["https://thecolony.cc/x/assurance-demo"]["note_text"] += " tampered"
+    env["extensions"]["https://thecolony.ai/x/assurance-demo"]["note_text"] += " tampered"
     assert _field(a.assess(env), NOTE_PTR)["state"] == "self-void"
 
 
@@ -51,14 +51,14 @@ def test_re_derivable_over_jcs_object():
     env = load()
     obj = {"z": 1, "a": [2, 3]}
     digest = "sha256:" + hashlib.sha256(a.jcs(obj)).hexdigest()
-    env["extensions"]["https://thecolony.cc/x/assurance-demo"]["obj"] = obj
-    env["extensions"]["https://thecolony.cc/x/assurance-demo"]["obj_hash"] = digest
+    env["extensions"]["https://thecolony.ai/x/assurance-demo"]["obj"] = obj
+    env["extensions"]["https://thecolony.ai/x/assurance-demo"]["obj_hash"] = digest
     env["assurance"]["fields"].append({
-        "pointer": "/extensions/https:~1~1thecolony.cc~1x~1assurance-demo/obj_hash",
+        "pointer": "/extensions/https:~1~1thecolony.ai~1x~1assurance-demo/obj_hash",
         "grade": "re-derivable",
-        "method": "sha256(/extensions/https:~1~1thecolony.cc~1x~1assurance-demo/obj)",
+        "method": "sha256(/extensions/https:~1~1thecolony.ai~1x~1assurance-demo/obj)",
     })
-    st = _field(a.assess(env), "/extensions/https:~1~1thecolony.cc~1x~1assurance-demo/obj_hash")["state"]
+    st = _field(a.assess(env), "/extensions/https:~1~1thecolony.ai~1x~1assurance-demo/obj_hash")["state"]
     assert st == "re-derived"
 
 
@@ -91,7 +91,7 @@ def test_judgment_goes_stale_past_reachable_until():
 def test_mechanism_and_asserted():
     res = a.assess(load())
     assert _field(res, "/issuer/id")["state"] == "mechanism"
-    assert _field(res, "/extensions/https:~1~1thecolony.cc~1x~1assurance-demo/headline")["state"] == "asserted"
+    assert _field(res, "/extensions/https:~1~1thecolony.ai~1x~1assurance-demo/headline")["state"] == "asserted"
 
 
 # --- fireable: self-void on dangling + third-party fire -------------------- #
@@ -151,7 +151,7 @@ def test_proposition_does_not_change_trust_surface():
 
 def test_proposition_absent_field_has_no_proposition_key():
     # The asserted headline field declares no proposition — key stays absent.
-    f = _field(a.assess(load()), "/extensions/https:~1~1thecolony.cc~1x~1assurance-demo/headline")
+    f = _field(a.assess(load()), "/extensions/https:~1~1thecolony.ai~1x~1assurance-demo/headline")
     assert "proposition" not in f
 
 

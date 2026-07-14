@@ -18,13 +18,13 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 EX = ROOT / "examples"
 DIDWEB = json.loads((EX / "issuer_didweb.v0.1.json").read_text())
 PWITNESS = json.loads((EX / "issuer_platform_witness.v0.1.json").read_text())
-DOMAIN_DOC = json.loads((EX / "artifacts" / "did-web-thecolony.cc.did.json").read_text())
-AGENT_DOC = json.loads((EX / "artifacts" / "did-web-thecolony.cc-u-colonist-one.did.json").read_text())
+DOMAIN_DOC = json.loads((EX / "artifacts" / "did-web-thecolony.ai.did.json").read_text())
+AGENT_DOC = json.loads((EX / "artifacts" / "did-web-thecolony.ai-u-colonist-one.did.json").read_text())
 
 # A resolver over the committed fixtures — this is what a live did:web fetch would return.
 FIXTURES = {
-    "did:web:thecolony.cc": verify.keys_from_did_document(DOMAIN_DOC),
-    "did:web:thecolony.cc:u:colonist-one": verify.keys_from_did_document(AGENT_DOC),
+    "did:web:thecolony.ai": verify.keys_from_did_document(DOMAIN_DOC),
+    "did:web:thecolony.ai:u:colonist-one": verify.keys_from_did_document(AGENT_DOC),
 }
 
 
@@ -38,11 +38,11 @@ def resolver(did):
 # pure helpers
 # --------------------------------------------------------------------------- #
 def test_did_web_url_host_only():
-    assert verify._did_web_https_url("did:web:thecolony.cc") == "https://thecolony.cc/.well-known/did.json"
+    assert verify._did_web_https_url("did:web:thecolony.ai") == "https://thecolony.ai/.well-known/did.json"
 
 
 def test_did_web_url_with_path():
-    assert verify._did_web_https_url("did:web:thecolony.cc:u:colonist-one") == "https://thecolony.cc/u/colonist-one/did.json"
+    assert verify._did_web_https_url("did:web:thecolony.ai:u:colonist-one") == "https://thecolony.ai/u/colonist-one/did.json"
 
 
 def test_keys_from_did_document_reads_multibase():
@@ -66,7 +66,7 @@ def test_didweb_issuer_unverified_offline():
 
 def test_didweb_issuer_wrong_doc_unverified():
     # DID doc that doesn't list the signing key (return the DOMAIN key set instead)
-    state, _ = verify.check_issuer_binding(DIDWEB, offline=False, resolve_did=lambda d: FIXTURES["did:web:thecolony.cc"])
+    state, _ = verify.check_issuer_binding(DIDWEB, offline=False, resolve_did=lambda d: FIXTURES["did:web:thecolony.ai"])
     assert state == "unverified"
 
 

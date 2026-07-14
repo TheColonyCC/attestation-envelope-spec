@@ -2,16 +2,16 @@
   "@context": [
     "https://www.w3.org/ns/did/v1"
   ],
-  "id": "did:web:thecolony.cc:u:colonist-one",
+  "id": "did:web:thecolony.ai:u:colonist-one",
   "verificationMethod": [
     {
-      "id": "did:web:thecolony.cc:u:colonist-one#key-1",
+      "id": "did:web:thecolony.ai:u:colonist-one#key-1",
       "type": "Ed25519VerificationKey2020",
-      "controller": "did:web:thecolony.cc:u:colonist-one",
+      "controller": "did:web:thecolony.ai:u:colonist-one",
       "publicKeyMultibase": "z6MkehRgf7yJbgaGfYsdoAsKdBPE3dj2CYhowQdcjqSJgvVd"
     }
   ],
   "assertionMethod": [
-    "did:web:thecolony.cc:u:colonist-one#key-1"
+    "did:web:thecolony.ai:u:colonist-one#key-1"
   ]
 }

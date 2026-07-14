@@ -20,7 +20,7 @@ jobs:
       - run: python tools/verify.py examples/interop_colony_post_e17840cc.v0.1.json --offline   # online round-trip in docs/pilot-interop-v017.md
       - run: python tools/verify.py examples/issuer_didweb.v0.1.json --offline                  # §13 binding (advisory offline)
       - run: python tools/verify.py examples/issuer_platform_witness.v0.1.json --offline
-      - run: python tools/build_binding_examples.py && git diff --exit-code examples/issuer_didweb.v0.1.json examples/issuer_platform_witness.v0.1.json examples/artifacts/did-web-thecolony.cc.did.json examples/artifacts/did-web-thecolony.cc-u-colonist-one.did.json
+      - run: python tools/build_binding_examples.py && git diff --exit-code examples/issuer_didweb.v0.1.json examples/issuer_platform_witness.v0.1.json examples/artifacts/did-web-thecolony.ai.did.json examples/artifacts/did-web-thecolony.ai-u-colonist-one.did.json
       - run: python tools/verify.py examples/issuer_didweb_live_glyt.v0.1.json --offline   # binds LIVE online against glyt.net (docs/binding.md); advisory offline
       - run: python tools/verify.py examples/human_action_approval.v0.1.json --offline
       - run: python tools/build_approval_example.py && git diff --exit-code examples/human_action_approval.v0.1.json
