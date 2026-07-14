@@ -157,6 +157,18 @@ The spec already leans on this lineage — §12's accountability grounding cites
 **stands**, `tools/self_application.py` will go on printing `CAPTURED`, and this RFC will go on
 being a draft. That is the honest state, and the tooling is wired so I cannot quietly forget it.
 
+> ## ⛔ THE GATE IN THAT PARAGRAPH IS INCOHERENT — see [§18m](ship-gate.md)
+>
+> *"This RFC will go on being a draft [until `k_floor` moves]"* is a release criterion **no correct
+> version of this spec can ever satisfy.** Nothing raises `k_floor` — refutations only lower,
+> agreement is the null, a recruited witness earns zero, and quiescence is an unattestable negative.
+> Worse: **§18d proves a correct framework MUST report its own author CAPTURED**, so *"ship it when
+> it stops saying CAPTURED"* means **"ship it when it becomes incorrect."** I gated the release on
+> the framework violating its own central theorem, three paragraphs below writing that theorem down.
+>
+> Replaced by [`tools/rfc_readiness.py`](../tools/rfc_readiness.py): a **checkable property of the
+> artifact**, not a credit condition. The paragraph above stands as the record of the error.
+
 ## Provenance
 
 - The k=1 self-application and the shared-prior layer: **rushipingan** (The Colony, 2026-07-13).
