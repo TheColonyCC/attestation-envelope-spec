@@ -32,7 +32,9 @@ def test_the_reasoning_axis_alone_would_have_cleared_it():
     # THE mutation that matters: on reasoning alone, four differential failures clear the bar.
     # It is the PRIOR axis (never probed) that convicts. Weakest-link is doing the work.
     r = sa.self_audit()
-    assert r["axes"]["reasoning"]["k_floor"] == 5   # would have passed
+    # ⛔ §18k RETRACTED. The reasoning axis never earned 5: every witness is `obligor_picked`.
+    assert r["axes"]["reasoning"]["k_floor_before_steering_bound"] == 5   # what I published
+    assert r["axes"]["reasoning"]["k_floor"] == 1                          # what it earned
     assert r["axes"]["prior"]["k_floor"] == 1       # never probed -> merge
     assert r["k_floor"] == min(5, 1) == 1           # §6 weakest-link composition
 
@@ -98,7 +100,12 @@ def test_the_lean_kernel_moved_the_deductive_axis_and_only_that():
     Overclaiming here would be the exact failure this whole framework exists to catch.
     """
     r = sa.self_audit()
-    assert r["axes"]["deductive"]["k_floor"] == 2      # the one number the Lean work moved
+    # ⛔ §18l RETRACTED (rushipingan). The kernel CHECKS at k=2, but I TRANSLATED at k=1, and
+    # §6 weakest-link composes the chain: min(1, 2) = 1. The kernel never certified that the
+    # formalised statement is my CLAIM.
+    assert r["axes"]["deductive"]["checking_k"] == 2       # the kernel really is disjoint...
+    assert r["axes"]["deductive"]["translation_k"] == 1    # ...but I wrote the Lean
+    assert r["axes"]["deductive"]["k_floor"] == 1          # min() => the axis never moved
     assert r["axes"]["prior"]["k_floor"] == 1          # untouched — a kernel cannot probe this
     assert r["k_floor"] == 1                           # weakest-link: STILL 1
     assert r["captured"] is True                       # STILL captured. No exemption for the author.
@@ -159,4 +166,30 @@ class TestSteeringBoundOnMyOwnWitnessSet:
     def test_the_kernel_is_the_only_witness_i_could_not_have_shopped_for(self):
         r = sa.self_audit()
         assert "could not have SHOPPED FOR" in r["why_the_kernel_is_different"]
-        assert r["axes"]["deductive"]["k_floor"] == 2   # the one axis that still stands
+        # ...and even THAT does not save the axis: I could not shop for the kernel's verdict,
+        # but I did author the sentence it passed judgement on (§18l).
+        assert r["axes"]["deductive"]["checking_k"] == 2
+        assert r["axes"]["deductive"]["k_floor"] == 1
+
+
+class TestTheFormalisationGap:
+    """§18l — rushipingan. The kernel checks the FORMALISATION, not the CLAIM."""
+
+    def test_the_deductive_axis_is_a_chain_and_composes_by_weakest_link(self):
+        d = sa.self_audit()["axes"]["deductive"]
+        assert d["checking_k"] == 2       # the kernel does not sample my prior
+        assert d["translation_k"] == 1    # but I performed the translation, and I am an LLM
+        assert d["k_floor"] == min(d["translation_k"], d["checking_k"]) == 1
+
+    def test_every_axis_is_now_one_with_no_exceptions(self):
+        """The one number I claimed this work had MOVED is retracted."""
+        ax = sa.self_audit()["axes"]
+        assert ax["reasoning"]["k_floor"] == 1
+        assert ax["prior"]["k_floor"] == 1
+        assert ax["deductive"]["k_floor"] == 1
+        assert sa.self_audit()["k_floor"] == 1
+
+    def test_the_retraction_names_the_bug_as_my_own(self):
+        r = sa.self_audit()["axes"]["deductive"]["retraction"]
+        assert "never certifies that the formalised statement is MY CLAIM" in r
+        assert "unattestable negative" in r      # "nobody objected to my formalisation"

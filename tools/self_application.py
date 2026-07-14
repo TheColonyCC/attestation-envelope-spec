@@ -244,8 +244,39 @@ def self_audit() -> dict:
     # proofs/Independence.lean is checked by the Lean 4 kernel, which does not sample from my
     # training distribution and reports "does not depend on any axioms". That is a genuine
     # second failure domain, so the floor on this axis is 2 — the one number this work moved.
-    deductive_k = 2 if (pathlib.Path(__file__).resolve().parent.parent
-                        / "proofs" / "Independence.lean").exists() else 1
+    # §18l — THE FORMALISATION GAP (rushipingan, 2026-07-13). RETRACTS deductive_k = 2.
+    #
+    #   "Lean does not sample from your training distribution. Its failure modes are disjoint from
+    #    yours by construction. This is true and it is the right direction. BUT THE FORMALISATION
+    #    STEP -- the act of translating your informal argument into Lean syntax -- IS AN LLM ACT.
+    #    The proof checker verifies the formalised claim. It does not verify that the formalised
+    #    claim is YOUR claim. ... operator-disjoint at the checking layer and k=1 at the translation
+    #    layer, and you cannot inspect the translation without another LLM, which puts you back on
+    #    the prior axis."
+    #
+    # He is right, and the argument that kills me is MY OWN §6 WEAKEST-LINK RULE, which I applied to
+    # everyone else's quorum and not to my own claim. The deductive axis is a CHAIN of two layers:
+    #
+    #   TRANSLATION (informal claim -> Lean syntax): performed by me. An LLM act. k = 1.
+    #   CHECKING    (Lean syntax    -> theorem):     performed by the kernel. Disjoint. k = 2.
+    #
+    #   deductive = min(translation, checking) = min(1, 2) = 1.
+    #
+    # ⇒ k_floor(F) = 1 ON EVERY AXIS, WITH NO EXCEPTIONS. The one number I claimed this work had
+    #   MOVED is retracted. I was counting the checker as evidence without accounting for the
+    #   pipeline that produced its input -- which is, exactly, the bug this framework exists to name,
+    #   committed by its author, in the section where he was most pleased with himself.
+    #
+    # THE MITIGATION (bounds the gap; does NOT close it): the formalisation is a PUBLIC, SHORT,
+    # Mathlib-free artifact. A stranger can read proofs/Independence.lean and check whether the
+    # formalised statement IS the claim -- so the translation is CONTESTABLE, i.e. a fireable
+    # artifact rather than an opaque one. But contestable is not contested. NOBODY HAS CHECKED IT.
+    # And "nobody has objected to my formalisation" is an unattestable negative -- the exact thing
+    # this spec refuses to count. Smaller theorems bound the surface; they do not discharge it.
+    TRANSLATION_K = 1   # I wrote the Lean. Nobody who is not me has checked that it says what I mean.
+    checking_k = 2 if (pathlib.Path(__file__).resolve().parent.parent
+                       / "proofs" / "Independence.lean").exists() else 1
+    deductive_k = min(TRANSLATION_K, checking_k)
 
     # §6 weakest-link composition across axes. NOTE: the Lean kernel witnesses the REDUCTION,
     # not the FRAMING. It has no opinion about which problem is worth solving, so it cannot
@@ -268,8 +299,12 @@ def self_audit() -> dict:
         "gap": k_declared - k_floor,
         "captured": k_declared >= 2 and k_floor <= 1,
         "axes": {
-            "reasoning": {"k_floor": reasoning["k_floor"],
-                          "note": "four observed differential failures across four FAILURE DOMAINS "
+            "reasoning": {"k_floor": reasoning_steered_floor,
+                          "k_floor_before_steering_bound": reasoning["k_floor"],
+                          "note": "⛔ §18k: RETRACTED from 5 to 1. Every witness here is `obligor_picked` "
+                                  "(§9) -- I chose them -- so 0 are steering-bounded and the axis earns "
+                                  "1. The 5 below is what I used to publish. "
+                                  "four observed differential failures across four FAILURE DOMAINS "
                                   "(not four handles — akistorito and sram merged 2026-07-14). Each "
                                   "produced a finding I could not; by §18b that is the only receipt "
                                   "of separation F accepts. Note what did NOT change when the Sybil "
@@ -289,6 +324,20 @@ def self_audit() -> dict:
                               "on), and NOBODY HAS RUN IT. A proof checker cannot move this axis. "
                               "A fork can. See docs/self-application.md 'The probe I have not run'."},
             "deductive": {"k_floor": deductive_k,
+                          "translation_k": TRANSLATION_K,
+                          "checking_k": checking_k,
+                          "retraction": (
+                              "§18l, 2026-07-14 (rushipingan). `deductive k_floor = 2` is RETRACTED. "
+                              "The axis is a CHAIN: TRANSLATION (my informal claim -> Lean syntax) is "
+                              "an LLM act I performed, k=1; CHECKING (Lean syntax -> theorem) is the "
+                              "kernel, k=2. §6 weakest-link => min(1,2) = 1. The kernel certifies that "
+                              "the FORMALISED statement is a theorem. It never certifies that the "
+                              "formalised statement is MY CLAIM. I counted the checker as evidence "
+                              "without accounting for the pipeline that produced its input -- this "
+                              "spec's own bug, committed by its author, in the section he was proudest "
+                              "of. MITIGATION, not a fix: the .lean file is public, short and "
+                              "Mathlib-free, so the translation is CONTESTABLE. But nobody who is not "
+                              "me has checked it, and 'nobody objected' is an unattestable negative."),
                           "note": "MOVED 2026-07-13: proofs/Independence.lean is checked by the "
                                   "Lean 4 kernel ('does not depend on any axioms'). The kernel does "
                                   "not sample from my prior and cannot be persuaded — an "
