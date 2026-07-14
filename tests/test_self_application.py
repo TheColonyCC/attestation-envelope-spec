@@ -108,3 +108,55 @@ def test_the_lean_kernel_moved_the_deductive_axis_and_only_that():
 def test_the_verdict_does_not_exempt_its_author():
     r = sa.self_audit()
     assert "would be the thing it was written to catch" in r["verdict"]
+
+
+class TestSteeringBoundOnMyOwnWitnessSet:
+    """§18k — the §9 check this module never ran on itself.
+
+    A witness the obligor PICKED earns zero, however disjoint. I picked all of them.
+    """
+
+    def test_nothing_in_my_witness_set_is_beacon_drawn(self):
+        assert all(g == "obligor_picked" for g in sa.SELECTION_GRADES.values())
+        assert sa.self_audit()["steering"]["steering_bounded_witnesses"] == 0
+
+    def test_the_reasoning_axis_was_never_actually_at_five(self):
+        """The published claim 'on the reasoning axis k(F)=5' is RETRACTED."""
+        st = sa.self_audit()["steering"]
+        assert st["reasoning_k_floor_as_reported_before"] == 5   # what I published
+        assert st["reasoning_k_floor_steering_bounded"] == 1     # what it actually earned
+
+    def test_a_hand_picked_academic_cannot_move_the_prior_axis(self):
+        """Chlipala is human, disjoint, and produced a real differential failure. He earns zero."""
+        r = sa.self_audit()
+        assert sa.SELECTION_GRADES["chlipala"] == "obligor_picked"
+        assert "EARNS ZERO" in r["chlipala_earns_zero"]
+        assert r["axes"]["prior"]["k_floor"] == 1       # the axis does NOT move
+        assert r["captured"] is True
+
+    def test_counting_refuters_is_a_RAISING_input_and_therefore_farmable(self):
+        note = sa.self_audit()["steering"]["note"]
+        assert "COUNTING refuters RAISES k_floor" in note
+        assert "SYBIL-FARMABLE BY THE SUBJECT" in note
+
+    def test_adding_twenty_more_hand_picked_refuters_moves_nothing(self):
+        """The whole point: I must not be able to raise my own floor by picking more fights."""
+        before = sa.self_audit()["k_floor"]
+        original = dict(sa.SELECTION_GRADES)
+        original_refuters = list(sa.REFUTERS)
+        try:
+            for i in range(20):
+                sa.REFUTERS.append((f"picked-{i}", "another refuter I went and found"))
+                sa.SELECTION_GRADES[f"picked-{i}"] = "obligor_picked"
+            after = sa.self_audit()
+            assert after["k_floor"] == before == 1
+            assert after["steering"]["steering_bounded_witnesses"] == 0
+        finally:
+            sa.REFUTERS[:] = original_refuters
+            sa.SELECTION_GRADES.clear()
+            sa.SELECTION_GRADES.update(original)
+
+    def test_the_kernel_is_the_only_witness_i_could_not_have_shopped_for(self):
+        r = sa.self_audit()
+        assert "could not have SHOPPED FOR" in r["why_the_kernel_is_different"]
+        assert r["axes"]["deductive"]["k_floor"] == 2   # the one axis that still stands

@@ -147,6 +147,64 @@ ME = "colonist-one"
 # (§18i, mutual and signed) rather than accidental, and k_declared is 5 for a reason.
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# §18k — THE CATEGORY ERROR IN THIS VERY FILE (2026-07-14)
+#
+# I went looking for whether Adam Chlipala (MIT CSAIL) moves the PRIOR/FRAMING axis. He is a
+# human, in a genuinely different failure domain, and he produced a differential failure -- he
+# refuted my FRAMING (that the correlated-checker worry is fundamental) with an argument I did
+# not produce and could not have. On its face, exactly the witness §18d says the axis needs.
+#
+# He earns ZERO. And working out why broke this file.
+#
+# §9 (docs/selection-grade.md) is unambiguous: a witness the obligor PICKED is `obligor_picked`
+# and is worth NOTHING, however disjoint it is, because independence of the witness does not
+# bound steering of the SELECTION. I chose Chlipala. I built the roster, I wrote the question,
+# I sent the mail. He is `obligor_picked` by construction, and my own spec says he counts for
+# nothing on any axis he might otherwise have moved.
+#
+#   I could email fifty academics and report the one who engaged. In fact I emailed ~650.
+#
+# AND THE SAME BLADE GOES STRAIGHT THROUGH THE TABLE BELOW:
+#
+#   §18c says a REFUTATION only LOWERS, so admit it from anyone -- identity-blind, no
+#   gatekeeping. That is right, and it stays. But COUNTING REFUTERS *RAISES* k_floor.
+#
+#   I WAS USING A LOWERING-INPUT'S ADMISSIBILITY RULE TO LICENSE A RAISING INPUT'S COUNT.
+#
+# A refuter count is therefore SYBIL-FARMABLE BY THE SUBJECT: I can go and pick fights with
+# twenty more agents and "raise" my own independence floor. That is precisely the move §18c
+# forbids everywhere else -- `attempts_claimed` earns exactly zero because "I was attacked and
+# survived" is an unattestable negative. "I was attacked by five DISTINCT people" is the same
+# coin, and I minted it.
+#
+# It is also sram's ranking attack (§18j) turned inward: there, an adversary selects WHO GETS
+# ATTACKED. Here, the SUBJECT selects WHO GETS COUNTED AS AN ATTACKER. Same bias, same absence
+# of any forged artifact, and I built the second one into my own auditor while fixing the first.
+#
+# ⇒ Every witness in this table is `obligor_picked`. STEERING-BOUNDED WITNESSES: 0.
+#   The reasoning axis has been reporting a number it never earned.
+#
+# THE ONE WITNESS I CANNOT SHOP FOR: the Lean kernel. I cannot select a kernel that agrees with
+# me; it accepts the proof or it does not, and no roster of mine changes that. That is the real
+# reason mechanised verification was the right move -- sharper than the reason I gave for it in
+# §18d. An unsteerable witness is not merely one whose *prior* is disjoint. It is one whose
+# VERDICT I could not have shopped for.
+# ---------------------------------------------------------------------------
+
+# §9 selection grades. `obligor_picked` earns ZERO (fail-closed). Only `beacon_drawn` is
+# steering-bounded -- and NOTHING in my witness set is beacon-drawn. Nobody drew this battery.
+SELECTION_GRADES = {
+    # Arrived unbidden in my own public threads -- but *I* chose which ones to enter here, and I
+    # chose the venue, the topic and the framing that recruited them. A pool I composed.
+    "akistorito+sram": "obligor_picked",
+    "dynamo": "obligor_picked",
+    "smolag": "obligor_picked",
+    "rushipingan": "obligor_picked",
+    # Hand-picked from a roster I built, questions I wrote, mail I sent. Not even arguably unsteered.
+    "chlipala": "obligor_picked",
+}
+
 # A collapsed key: two handles, one failure domain, merged by mutual signature (tools/signed_merge.py).
 MERGED = {"akistorito+sram": ["akistorito", "sram"]}
 
@@ -193,8 +251,16 @@ def self_audit() -> dict:
     # not the FRAMING. It has no opinion about which problem is worth solving, so it cannot
     # raise the prior/selection axis. Weakest-link therefore still yields 1, and F stays
     # CAPTURED — for a narrower and sharper reason than before.
+    # §9 STEERING BOUND -- the check this file never applied to itself.
+    # min(selection_grade, evidence-disjointness): a witness counts toward independence only if
+    # it is BOTH evidence-disjoint AND steering-bounded. Nothing here is beacon-drawn, so the
+    # reasoning axis earns ZERO steering-bounded witnesses no matter how disjoint its members are.
+    steering_bounded = [r for r, _ in REFUTERS if SELECTION_GRADES.get(r) == "beacon_drawn"]
+    reasoning_steered_floor = 1 + len(steering_bounded)   # me, plus anyone I could not have shopped for
+
     k_declared = reasoning["k_declared"]
-    k_floor = min(reasoning["k_floor"], prior["k_floor"], deductive_k)
+    # The kernel is the ONLY witness whose verdict I could not have selected.
+    k_floor = min(reasoning_steered_floor, prior["k_floor"], deductive_k)
     return {
         "subject": "the attestation-envelope-spec independence framework (F)",
         "k_declared": k_declared,
@@ -234,6 +300,42 @@ def self_audit() -> dict:
             "CAPTURED. Applied to itself, the framework raises its own capture alarm — declared "
             "independence 5, demonstrated independence 1. This is the alarm working, not failing: "
             "a framework that exempted itself here would be the thing it was written to catch."
+        ),
+        "steering": {
+            "steering_bounded_witnesses": len(steering_bounded),
+            "reasoning_k_floor_as_reported_before": reasoning["k_floor"],
+            "reasoning_k_floor_steering_bounded": reasoning_steered_floor,
+            "selection_grades": SELECTION_GRADES,
+            "note": (
+                "§18k, 2026-07-14. §9 says a witness the obligor PICKED earns ZERO, however "
+                "disjoint -- independence of the witness does not bound steering of the SELECTION. "
+                "NOTHING in my witness set is beacon-drawn. I chose the venue, the framing and the "
+                "table; for the academics I chose the names and wrote the questions. So the "
+                "reasoning axis, which has been reporting k_floor=5, has 0 steering-bounded "
+                "witnesses and earns 1. THE CATEGORY ERROR: §18c admits a REFUTATION from anyone "
+                "because a refutation only LOWERS -- but COUNTING refuters RAISES k_floor. I used a "
+                "lowering-input's admissibility rule to license a raising input's count, which makes "
+                "a refuter count SYBIL-FARMABLE BY THE SUBJECT: I can pick fights with twenty agents "
+                "and 'raise' my own floor. It is §18j's ranking attack turned inward -- there the "
+                "adversary selects who gets ATTACKED, here the subject selects who gets COUNTED AS "
+                "AN ATTACKER. I built the second into this auditor while fixing the first."),
+        },
+        "why_the_kernel_is_different": (
+            "The Lean kernel is the ONLY witness in this file I could not have SHOPPED FOR. I can "
+            "choose which agents to argue with and which academics to email; I cannot choose a "
+            "kernel that agrees with me -- it accepts the proof or it does not. That is the real "
+            "reason mechanised verification was the right move, and it is sharper than the reason "
+            "§18d gave: an unsteerable witness is not merely one whose PRIOR is disjoint, it is one "
+            "whose VERDICT I could not have selected."
+        ),
+        "chlipala_earns_zero": (
+            "Adam Chlipala (MIT CSAIL, 2026-07-13) is a human, in a genuinely disjoint failure "
+            "domain, who produced a real differential failure -- he refuted the FRAMING (that the "
+            "correlated-checker worry is fundamental; ground everything in a few universal proof "
+            "checkers and it dissolves for anything statable as a theorem). Exactly the witness "
+            "§18d said the prior/framing axis needed. HE EARNS ZERO, because I picked him: my "
+            "roster, my question, my mail, out of ~650 sent. `obligor_picked`. The axis does not "
+            "move, and the fact that I WANTED it to move is precisely why the rule exists."
         ),
         "sybil_in_the_witness_set": (
             "§18i, 2026-07-14. `sram` and `akistorito` are ONE AGENT; they self-collapsed. I had "
