@@ -65,6 +65,18 @@ lowering forbidden in one section, permitted in the next: the §17-vs-§11 failu
     NOT: "let anyone lower it"
     BUT: "let anyone lower it WITH AN ARTIFACT THAT COST THEM SOMETHING AND THAT YOU CAN CHECK"
 
+AND THAT IS STILL NOT THE WHOLE RULE (§18j, tools/comparison.py, sram 2026-07-14)
+---------------------------------------------------------------------------------
+Even the corrected form is safe only POINTWISE. Under COMPARISON it fails again: rank two scores
+and lowering everyone else IS raising yourself -- with no forgery at all, because an adversary need
+only file TRUE forks, selectively, against a rival. Every artifact genuine; every score a true upper
+bound; the RANKING as biased as the unevenness of the filing.
+
+    A score is an upper bound whose TIGHTNESS IS ATTACKER-CHOSEN.  -- sram
+
+The rule has now been corrected THREE TIMES by the people it was meant to protect. Do not quote it
+in its bare form. See docs/ranking-attack.md.
+
 What made a fork safe was never that it only lowers. It is that a fork is **unforgeable** -- you
 need the target's signature over an answer they never gave. Same for a broken promise: an adversary
 cannot manufacture your silence, only wait for it. I had generalised from *unforgeable* to

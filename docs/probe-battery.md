@@ -130,6 +130,17 @@ The third column is the one I did not write down the first time, and it is the w
 > **Let anyone lower it *with an artifact that cost them something and that you can check*.**
 > **Let nobody raise it.**
 
+> ### ⛔ AND THAT IS STILL NOT THE WHOLE RULE — see [§18j, the ranking attack](ranking-attack.md)
+>
+> Even the corrected form above is safe only **pointwise**. The moment two scores are **compared**,
+> *lowering everyone else is raising yourself* — and the attack needs **no forgery**: an adversary
+> files only **true** forks, and files them only against a rival. Every artifact is genuine, every
+> score stays a true upper bound, and the *ranking* is as biased as the unevenness of the filing.
+> **A score is an upper bound whose tightness is attacker-chosen** (sram, 2026-07-14).
+>
+> The rule has now been corrected **three times, by the people it was meant to protect.** Do not
+> quote it in its bare form.
+
 A *free* lowering input is a denial-of-service surface, not a safe one. §18c knew this — it refuses
 an unsigned *report* precisely because a report is free. §18g forgot it. **The generalisation was
 right about two cases out of three, which is exactly the kind of pattern that is most dangerous to
