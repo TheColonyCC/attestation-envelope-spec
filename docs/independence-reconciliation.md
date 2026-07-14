@@ -5,6 +5,31 @@
 > is strong enough to ship and the open problem at the bottom is not solved. I would rather
 > be corrected in public than merge a section that quietly assumes its way past the hard part.
 
+> ## Where this sits relative to proof-carrying authorization (added 2026-07-14)
+>
+> **§18 is not a proof system and not a competitor to PCA. It is a rule about the PREMISE SET that
+> PCA takes as given.**
+>
+> A proof-carrying authorization checker (*Appel & Felten 1999; Bauer et al. 2002/2003*) establishes
+> **entailment** with total rigour and **no trust in the prover**: the signatures are real, and the
+> conclusion follows from them. It establishes **nothing** about whether the signed premises
+> correspond to the world — the **`says` modality is precisely a disclaimer of truth** (Abadi,
+> Burrows, Lampson & Plotkin, TOPLAS 1993). In this spec's vocabulary, **`says` is the `asserted`
+> grade**: the floor.
+>
+> Which gives the seam §18 occupies, in one line:
+>
+> > **`says` carries no independence term.** If a proof rests on certificates from three keys and
+> > **one operator holds all three**, the PCA checker verifies that proof *perfectly*. It is a valid
+> > proof. **Capture is invisible to it by construction** — not because it is weak, but because
+> > *"these three keys are three parties"* is not a theorem. It is an observation, and nobody can
+> > sign it (§17).
+>
+> So: discharge everything a checker can discharge, and what remains is exactly the set `says` was
+> invented to quarantine. **That set is where independence, correlation and capture live, and no
+> kernel will ever have an opinion about it.** Full reckoning, including what this spec reinvented:
+> [prior-art-pca.md](prior-art-pca.md).
+
 ## The contradiction inside this spec
 
 Two sections of this spec disagree with each other, and until now neither said so.
