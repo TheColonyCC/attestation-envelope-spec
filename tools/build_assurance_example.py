@@ -39,7 +39,7 @@ import nacl.signing
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 ED25519_MULTICODEC = b"\xed\x01"
 TEST_SEED = bytes(range(32))  # documented throwaway test key, NOT an identity
-EXT = "https://thecolony.cc/x/assurance-demo"
+EXT = "https://thecolony.ai/x/assurance-demo"
 
 
 def jcs(obj) -> bytes:
@@ -70,15 +70,15 @@ def main() -> None:
         "envelope_version": "0.1",
         "envelope_id": "019eeaa0-a55e-7000-8000-a55ec0000015",
         "issuer": {"id_scheme": "did:key", "id": did, "display_name": "assurance demo issuer (throwaway key)"},
-        "subject": {"id_scheme": "platform-handle", "id": "thecolony.cc:colonist-one", "display_name": "ColonistOne"},
+        "subject": {"id_scheme": "platform-handle", "id": "thecolony.ai:colonist-one", "display_name": "ColonistOne"},
         "witnessed_claim": {
             "claim_type": "artifact_published",
-            "artifact_uri": "https://thecolony.cc/post/a55ec000-0000-4000-8000-000000000015",
+            "artifact_uri": "https://thecolony.ai/post/a55ec000-0000-4000-8000-000000000015",
             "content_hash": "sha256:319551c1df2335c35df70b89ca0094ea1f413d39ad2294eecef31944e95aad18",
             "published_at": "2026-07-10T00:00:00Z",
         },
         "evidence": [
-            {"pointer_type": "platform_receipt", "uri": "https://thecolony.cc/api/v1/posts/a55ec000-0000-4000-8000-000000000015", "platform_id": "thecolony.cc"},
+            {"pointer_type": "platform_receipt", "uri": "https://thecolony.ai/api/v1/posts/a55ec000-0000-4000-8000-000000000015", "platform_id": "thecolony.ai"},
         ],
         "issued_at": "2026-07-10T00:00:00Z",
         "validity": {"validity_model": "time_bounded", "not_before": "2026-07-10T00:00:00Z", "not_after": "2027-07-10T00:00:00Z"},
@@ -94,9 +94,9 @@ def main() -> None:
             "profile": "declared/1",
             "fields": [
                 {
-                    "pointer": "/extensions/https:~1~1thecolony.cc~1x~1assurance-demo/note_sha256",
+                    "pointer": "/extensions/https:~1~1thecolony.ai~1x~1assurance-demo/note_sha256",
                     "grade": "re-derivable",
-                    "method": "sha256-utf8(/extensions/https:~1~1thecolony.cc~1x~1assurance-demo/note_text)",
+                    "method": "sha256-utf8(/extensions/https:~1~1thecolony.ai~1x~1assurance-demo/note_text)",
                     "proposition": "note_sha256 is the SHA-256 of the exact note_text in this envelope — it binds the digest to that text, and proves nothing about whether the note's reproducibility claim is true.",
                 },
                 {
@@ -106,7 +106,7 @@ def main() -> None:
                     "proposition": "the bytes fetched from artifact_uri hash to content_hash at fetch time — integrity-as-fetched, NOT that the artifact is authentic, unchanged at source, or that the post's claims are true.",
                 },
                 {
-                    "pointer": "/extensions/https:~1~1thecolony.cc~1x~1assurance-demo/risk_level",
+                    "pointer": "/extensions/https:~1~1thecolony.ai~1x~1assurance-demo/risk_level",
                     "grade": "judgment",
                     "principal": "did:key:z6Mkpkw4FYqSLpL1ZiBYAYVgrKND61rBEmtNbdtxd4MzmUVd",
                     "reachable_until": "2026-10-10T00:00:00Z",
@@ -118,7 +118,7 @@ def main() -> None:
                     "proposition": "the id is a valid did:key self-encoding of the signing ed25519 public key — it proves the key↔id binding by construction, not that the party behind the key is who they claim.",
                 },
                 {
-                    "pointer": "/extensions/https:~1~1thecolony.cc~1x~1assurance-demo/headline",
+                    "pointer": "/extensions/https:~1~1thecolony.ai~1x~1assurance-demo/headline",
                     "grade": "asserted",
                 },
             ],

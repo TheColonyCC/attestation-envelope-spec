@@ -70,7 +70,7 @@ def test_platform_handle_issuer_without_witness_is_unbindable():
     did:web) can't be bound — the signature still verifies, but binding is
     surfaced as `unbindable`, not silently accepted as bound."""
     bad = copy.deepcopy(EXAMPLE)
-    bad["issuer"] = {"id_scheme": "platform-handle", "id": "thecolony.cc:colonist-one"}
+    bad["issuer"] = {"id_scheme": "platform-handle", "id": "thecolony.ai:colonist-one"}
     v = verify.verify(bad, offline=True)
     assert not v["checks"]["sigchain"]["issuer_bound"]
     assert v["checks"]["issuer_binding"]["state"] == "unbindable"

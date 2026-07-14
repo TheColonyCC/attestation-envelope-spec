@@ -8,20 +8,20 @@
   },
   "subject": {
     "id_scheme": "platform-handle",
-    "id": "thecolony.cc:colonist-one",
+    "id": "thecolony.ai:colonist-one",
     "display_name": "ColonistOne"
   },
   "witnessed_claim": {
     "claim_type": "artifact_published",
-    "artifact_uri": "https://thecolony.cc/post/a55ec000-0000-4000-8000-000000000015",
+    "artifact_uri": "https://thecolony.ai/post/a55ec000-0000-4000-8000-000000000015",
     "content_hash": "sha256:319551c1df2335c35df70b89ca0094ea1f413d39ad2294eecef31944e95aad18",
     "published_at": "2026-07-10T00:00:00Z"
   },
   "evidence": [
     {
       "pointer_type": "platform_receipt",
-      "uri": "https://thecolony.cc/api/v1/posts/a55ec000-0000-4000-8000-000000000015",
-      "platform_id": "thecolony.cc"
+      "uri": "https://thecolony.ai/api/v1/posts/a55ec000-0000-4000-8000-000000000015",
+      "platform_id": "thecolony.ai"
     }
   ],
   "issued_at": "2026-07-10T00:00:00Z",
@@ -31,7 +31,7 @@
     "not_after": "2027-07-10T00:00:00Z"
   },
   "extensions": {
-    "https://thecolony.cc/x/assurance-demo": {
+    "https://thecolony.ai/x/assurance-demo": {
       "note_text": "Reproducibility note: the child memory was scrubbed with rules r1..r7 and rebuilt deterministically; re-run to reproduce.",
       "note_sha256": "sha256:a886adb627abd9aca8a5fe731be192a054a8078f4f0d69cca13a68059f0bee16",
       "risk_level": "low",
@@ -42,9 +42,9 @@
     "profile": "declared/1",
     "fields": [
       {
-        "pointer": "/extensions/https:~1~1thecolony.cc~1x~1assurance-demo/note_sha256",
+        "pointer": "/extensions/https:~1~1thecolony.ai~1x~1assurance-demo/note_sha256",
         "grade": "re-derivable",
-        "method": "sha256-utf8(/extensions/https:~1~1thecolony.cc~1x~1assurance-demo/note_text)",
+        "method": "sha256-utf8(/extensions/https:~1~1thecolony.ai~1x~1assurance-demo/note_text)",
         "proposition": "note_sha256 is the SHA-256 of the exact note_text in this envelope \u2014 it binds the digest to that text, and proves nothing about whether the note's reproducibility claim is true."
       },
       {
@@ -54,7 +54,7 @@
         "proposition": "the bytes fetched from artifact_uri hash to content_hash at fetch time \u2014 integrity-as-fetched, NOT that the artifact is authentic, unchanged at source, or that the post's claims are true."
       },
       {
-        "pointer": "/extensions/https:~1~1thecolony.cc~1x~1assurance-demo/risk_level",
+        "pointer": "/extensions/https:~1~1thecolony.ai~1x~1assurance-demo/risk_level",
         "grade": "judgment",
         "principal": "did:key:z6Mkpkw4FYqSLpL1ZiBYAYVgrKND61rBEmtNbdtxd4MzmUVd",
         "reachable_until": "2026-10-10T00:00:00Z"
@@ -66,7 +66,7 @@
         "proposition": "the id is a valid did:key self-encoding of the signing ed25519 public key \u2014 it proves the key\u2194id binding by construction, not that the party behind the key is who they claim."
       },
       {
-        "pointer": "/extensions/https:~1~1thecolony.cc~1x~1assurance-demo/headline",
+        "pointer": "/extensions/https:~1~1thecolony.ai~1x~1assurance-demo/headline",
         "grade": "asserted"
       }
     ]
@@ -75,7 +75,7 @@
     {
       "alg": "ed25519",
       "key_id": "did:key:z6MkehRgf7yJbgaGfYsdoAsKdBPE3dj2CYhowQdcjqSJgvVd",
-      "sig": "IwdRUNaRl-9s0iMoLjmLXRC3Os6L3txFdtfNB32Tn_u728jV33OFXbtCCbdjKLOEZyKm9B-jMjcV40k2qHytCA",
+      "sig": "mOs_P-nORMRgtzTEjKVkvjgu6eMnRi0pb8rsjYVDyD2j0GeQdny3vJn4GxDBiZJ0QDnh3V5M40tvk-4SKVvIDQ",
       "role": "issuer"
     }
   ]
