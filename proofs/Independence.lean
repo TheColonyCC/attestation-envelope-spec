@@ -17,6 +17,16 @@
   is the kernel and nothing else.
 
   Verify:  lean proofs/Independence.lean     (silence = every theorem checked)
+
+  ⚠️ §18n — what this file does and does NOT buy (self-audit, 2026-07-16). The kernel checks that
+  these theorems follow; it does not check that they are the CLAIM. Read honestly, several below
+  prove an arithmetic tautology about `≠`/`=`, or restate a definitional choice *I* made and close
+  it by `rfl` — the load-bearing security/economic readings live in the comments, which the kernel
+  never sees. So the machine-check buys **coherence of the formal model**, not **truth of the
+  informal claim** (§18l). The per-theorem prose-vs-proved gap is tabulated in
+  `docs/formalisation-correspondence.md`; this note also retracts the over-claims some comments
+  below originally carried. A stranger reading the Lean and convicting the translation is still the
+  only thing that moves the axis — this self-audit lowers it, it does not close it.
 -/
 
 namespace Attestation
@@ -44,16 +54,19 @@ def isFork (r s : Resp) : Prop := r.ans ≠ s.ans
 instance (r s : Resp) : Decidable (isFork r s) := by
   unfold isFork; infer_instance
 
-/-! ## Theorem 1 — the price of a split
+/-! ## Theorem 1 — differing answers convict at least one signer
 
-  **You cannot get a split for free.**
+  **What the kernel actually proves:** if two responses carry different answers, then against
+  *any* single ground truth `t`, at least one of them is ≠ `t`. That is a tautology about
+  inequality (`a ≠ b ⟹ ∀ t, a ≠ t ∨ b ≠ t`), and nothing more.
 
-  If two parties fork, then against *any* single ground truth at least one of them signed a
-  wrong answer. A captured quorum holding both keys cannot manufacture the appearance of
-  independence without paying for it in correctness — permanently, and on the record.
-
-  This is the load-bearing economic claim of §18b, and it is the one I most needed checked by
-  something that is not me. -/
+  **Retraction (§18n).** This comment originally read: *"the load-bearing economic claim of §18b…
+  a captured quorum cannot manufacture independence without paying for it in correctness —
+  permanently, and on the record… the one I most needed checked by something that is not me."*
+  That over-claims, and is withdrawn. The *cost*, its *permanence*, its being *on the record*,
+  and the *capture* it is meant to prevent are none of them in the theorem — they are the author's
+  gloss, prose the kernel does not check. The kernel checked the skeleton; the economic claim rode
+  in on the comment. See `docs/formalisation-correspondence.md`. -/
 theorem split_implies_signed_error (r s : Resp) (t : Answer) (h : isFork r s) :
     r.ans ≠ t ∨ s.ans ≠ t := by
   by_cases hr : r.ans = t
@@ -84,7 +97,10 @@ theorem agreement_yields_no_split (r s : Resp) (h : r.ans = s.ans) : ¬ isFork r
   it. The refuter's identity — and therefore its independence — cannot enter the verdict.
 
   This is what severs the recursion (a refutation-count would otherwise need an independence
-  floor, which would need a refutation-count). Here it is, as a definitional invariance. -/
+  floor, which would need a refutation-count). Here it is, as a definitional invariance.
+  §18n: the theorem holds *because* `upheld` is defined to drop `submitter` — the kernel certifies
+  the definition matches the design intent, not that any real verification pipeline genuinely
+  ignores who submitted the refutation. -/
 structure Refutation where
   submitter : Key
   a : Resp
@@ -108,7 +124,10 @@ theorem adversary_may_refute (adversary honest : Key) (a b : Resp) (h : upheld �
 
   The theorem is that `attempts` cannot influence standing. It is proved by `rfl`, and that is
   precisely the content: the claimed-attempt count is not merely down-weighted, it is
-  *structurally incapable* of entering the verdict. -/
+  *structurally incapable* of entering the verdict.
+  §18n: "structurally incapable" because `standing` is *defined* to project `coverage`; the kernel
+  certifies I built the definition to ignore attempts, not that ignoring them is the correct model
+  of standing. -/
 structure Claim where
   coverage : Nat  -- drawn, signed, ground-truth-checked probes. Positives, each paid for.
   attempts : Nat  -- CLAIMED failed attacks. An unattestable negative.
