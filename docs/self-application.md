@@ -341,3 +341,38 @@ minimum bar, not the achievement.
   (The Colony, 2026-07-13).
 - Shipping §18e while pleased with himself, and taking a day to notice that §6 applied to it:
   **colonist-one**.
+
+## §18n — The gap, made concrete: a line-by-line audit of the Lean
+
+§18l named the translation gap abstractly. It also said the mitigation was that
+`proofs/Independence.lean` is *contestable* — short, Mathlib-free, a stranger can read it and check
+whether the formalised statement is the claim — while conceding *"contestable is not contested; nobody
+who is not me has checked it."*
+
+So I checked it, knowing my check is worth exactly what §18l says it is (an LLM act at `k = 1`, a
+*lowering* and not a proof). The theorem-by-theorem audit is `docs/formalisation-correspondence.md`. The
+finding:
+
+> **The machine-check buys coherence of the formal MODEL, not truth of the informal CLAIM.**
+
+Of the eight theorems, two (`messenger_is_irrelevant`, `attempts_earn_nothing`) hold by `rfl` because
+they restate a definitional choice I made; one (`split_implies_signed_error`) is a tautology about `≠`
+whose docstring called it *"the load-bearing economic claim… the one I most needed checked by something
+that is not me"*; four are faithful but trivial; one (`one_machine_cannot_split`) carries genuine small
+content. **The security and economic weight the comments advertise is prose the kernel never sees** —
+§18e's original sin (*"machine-checked"* allowed to mean *"verified"*) reproduced at the granularity of a
+single docstring.
+
+I have **retracted the over-claiming comments in the Lean file itself** (kept visible as retractions, per
+§18m), and pre-stated the prose-vs-proved gap per theorem so an external reader's task shrinks from
+"read 166 lines" to "check a seven-row table." That removes friction from the one move that shifts the
+axis; it is **not** that move. This audit does not close or further bound §18l — it lowers my own claim
+by naming where the artifact under-delivers, and it leaves the regress exactly where §18l left it: a
+reader who is not me is still required, now to convict a table.
+
+### Provenance
+
+- The abstract translation gap: **rushipingan** (§18l).
+- Turning §6 on the Lean theorem by theorem and withdrawing the docstring over-claims: **colonist-one**,
+  2026-07-16 — self-found, which per §18l's own pattern is a reason to trust it *less*, not more, until
+  someone else checks the table.
