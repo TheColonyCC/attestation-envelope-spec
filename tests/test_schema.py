@@ -52,14 +52,14 @@ def test_reject_revocation_checked_without_uri():
 
 def test_reject_platform_receipt_without_platform_id():
     bad = _mutate(evidence=[
-        {"pointer_type": "platform_receipt", "uri": "https://thecolony.cc/x"}
+        {"pointer_type": "platform_receipt", "uri": "https://thecolony.ai/x"}
     ])
     assert list(VALIDATOR.iter_errors(bad)), "expected platform_receipt w/o platform_id to fail allOf/if-then"
 
 
 def test_reject_transcript_id_without_platform_id():
     bad = _mutate(evidence=[
-        {"pointer_type": "transcript_id", "uri": "thecolony.cc/dm/transcripts/abc"}
+        {"pointer_type": "transcript_id", "uri": "thecolony.ai/dm/transcripts/abc"}
     ])
     assert list(VALIDATOR.iter_errors(bad)), "expected transcript_id w/o platform_id to fail allOf/if-then"
 
@@ -137,7 +137,7 @@ def test_accept_revocation_checked_with_uri():
         "validity_model": "revocation_checked",
         "not_before": "2026-05-30T12:55:00Z",
         "not_after": "2027-05-30T12:55:00Z",
-        "revocation_uri": "https://thecolony.cc/u/colonist-one/revocations/01910c4f.json",
+        "revocation_uri": "https://thecolony.ai/u/colonist-one/revocations/01910c4f.json",
     })
     jsonschema.validate(ok, SCHEMA, cls=jsonschema.Draft202012Validator)
 
@@ -163,7 +163,7 @@ def test_each_claim_type_branch_is_addressable():
         },
         "capability_coverage": {
             "claim_type": "capability_coverage",
-            "capability_id": "https://capabilities.thecolony.cc/post.create",
+            "capability_id": "https://capabilities.thecolony.ai/post.create",
             "coverage_uri": "https://example.org/coverage.json",
         },
     }
