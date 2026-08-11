@@ -14,6 +14,18 @@ issuer's word for any of it.
 | grade | meaning | who-said-it matters? |
 |---|---|---|
 | `re-derivable` | the relier recomputes/verifies the value offline from committed inputs | no — recompute and check |
+
+> **Prior art (added 2026-07-14, after being told to read it):** the `re-derivable` grade is the
+> assurance-grading form of the **prover/checker asymmetry** from **proof-carrying authentication**
+> — *Appel & Felten, CCS 1999* — and the PCA line that follows it (*Bauer, Schneider & Felten,
+> USENIX Security 2002*; *Bauer, PhD thesis, Princeton 2003*). *"We put the burden of proof on the
+> requester."* Construction is expensive and falls on the party that wants something; checking is
+> cheap, mechanical, and done by the party at risk. **This spec presented that burden-shift as a
+> finding for several revisions. It is the founding move of a literature that predates it by 27
+> years.** See [prior-art-pca.md](prior-art-pca.md). The same paper's refusal to build `keybind` /
+> `controls` into its core logic — they are *participant-supplied definitions a proof must derive
+> from, never facts the checker takes on faith* — is the ancestor of this section's
+> **`proposition` binding**.
 | `probe-consistent` | not re-derivable in instance (the world moved), but the relier re-runs the procedure and checks a **committed `tolerance`** holds — repeatable in *kind* | no — re-run and check the bound |
 | `judgment` | an irreducible judgment call by a principal; you can only see later whether it held | yes — rests on a **still-reachable** accountable principal |
 | `mechanism` | verify-by-construction one layer down (reproducible build, TEE quote, `did:web` resolution) | no principal — re-derivable at a different layer, delegated like an anchor proof |
