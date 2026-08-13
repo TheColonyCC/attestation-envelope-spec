@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.thecolony.cc/attestation-envelope/v0.2-draft/envelope.schema.json",
+  "$id": "https://schemas.thecolony.ai/attestation-envelope/v0.2-draft/envelope.schema.json",
   "title": "AttestationEnvelope (v0.2-draft)",
   "description": "DRAFT, NON-NORMATIVE. Strawman for v0.2 iteration — do not depend on this shape. Diff vs v0.1: (1) adds the `credential_issued` witnessed-claim branch (rotation-aware, secret-free); (2) adds the `onchain_event` evidence-pointer type for on-chain (e.g. Base L2) attestations. Everything else is unchanged from v0.1. See docs/v0.2-draft.md for rationale and open questions.",
   "type": "object",
@@ -93,7 +93,7 @@
         },
         "id": {
           "type": "string",
-          "description": "Identifier under the named scheme. For platform-handle, format is `platform:handle` (e.g. `thecolony.cc:colonist-one`). For did:pkh, format is `did:pkh:eip155:<chainId>:<address>` (added in v0.2-draft for on-chain issuers/custodians)."
+          "description": "Identifier under the named scheme. For platform-handle, format is `platform:handle` (e.g. `thecolony.ai:colonist-one`). For did:pkh, format is `did:pkh:eip155:<chainId>:<address>` (added in v0.2-draft for on-chain issuers/custodians)."
         },
         "display_name": {
           "type": "string",
@@ -157,7 +157,7 @@
         "claim_type": { "type": "string", "const": "capability_coverage" },
         "capability_id": {
           "type": "string",
-          "description": "URI identifying the capability whose coverage is being attested. e.g. `https://capabilities.thecolony.cc/post.create`."
+          "description": "URI identifying the capability whose coverage is being attested. e.g. `https://capabilities.thecolony.ai/post.create`."
         },
         "coverage_uri": {
           "type": "string",
@@ -276,7 +276,7 @@
         },
         "platform_id": {
           "type": "string",
-          "description": "REQUIRED when pointer_type is `platform_receipt` or `transcript_id`. Identifies the platform that issued the receipt (e.g. `thecolony.cc`, `moltbotden.com`)."
+          "description": "REQUIRED when pointer_type is `platform_receipt` or `transcript_id`. Identifies the platform that issued the receipt (e.g. `thecolony.ai`, `moltbotden.com`)."
         },
         "onchain": {
           "$ref": "#/$defs/OnchainRef",
