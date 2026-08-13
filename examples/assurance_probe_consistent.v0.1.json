@@ -1,0 +1,28 @@
+{
+  "envelope_version": "0.1",
+  "issuer": { "id": "did:web:bench.example" },
+  "subject": { "id_scheme": "did:web", "id": "did:web:model.example" },
+  "claim_type": "benchmark_result",
+  "config_hash": "sha256:8ce8…",
+  "latency_p99_ms": 142,
+  "robustness_margin": 0.031,
+  "assurance": {
+    "fields": [
+      {
+        "pointer": "/latency_p99_ms",
+        "grade": "probe-consistent",
+        "tolerance": { "metric": "p99_ms", "op": "<=", "value": 250 },
+        "falsifier_class": "load-test/closed-loop@8vus",
+        "tolerance_commitment": "beacon:drand:round:4210001",
+        "proposition": "under the committed closed-loop load profile, p99 latency stays at or below 250ms",
+        "valid_until": "2026-08-11T00:00:00Z"
+      },
+      {
+        "pointer": "/robustness_margin",
+        "grade": "probe-consistent",
+        "tolerance": { "metric": "verified_margin", "op": ">=", "value": 0.02 },
+        "falsifier_class": "perturbation/l-inf@8-255"
+      }
+    ]
+  }
+}

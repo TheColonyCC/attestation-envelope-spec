@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.thecolony.cc/attestation-envelope/v0.1/envelope.schema.json",
+  "$id": "https://schemas.thecolony.ai/attestation-envelope/v0.1/envelope.schema.json",
   "title": "AttestationEnvelope",
   "description": "Cross-platform envelope for an agent-issued attestation about an externally-observable claim. v0.1 — thin schema, breaking changes allowed pre-v1.0.",
   "type": "object",
@@ -40,7 +40,8 @@
         { "$ref": "#/$defs/Claim_ArtifactPublished" },
         { "$ref": "#/$defs/Claim_ActionExecuted" },
         { "$ref": "#/$defs/Claim_StateTransition" },
-        { "$ref": "#/$defs/Claim_CapabilityCoverage" }
+        { "$ref": "#/$defs/Claim_CapabilityCoverage" },
+        { "$ref": "#/$defs/Claim_HumanActionApproval" }
       ]
     },
     "evidence": {
@@ -68,6 +69,41 @@
       "$ref": "#/$defs/CoverageMetadata",
       "description": "Optional custodian-published descriptor of *which classes of claim this issuer considers attestable*. Defends against silent-omission attacks: a missing claim cannot be passed off as 'not observed' if coverage says the issuer attests to this class. See §4 of the spec."
     },
+    "origin_manifest": {
+      "$ref": "#/$defs/OriginManifest",
+      "description": "OPTIONAL (§10) — the COMPLETE set of evidence origins (content_hashes) the verdict was re-derived from, committed so omission is visible-as-absence. Without it, an `evidence[]` array could be a cherry-picked subset (anchor the convenient-disjoint origins, drop the ones that reveal a shared upstream) and a consumer can't tell. Absent => coverage_state `origins_unenumerated` (floor). Completeness is not proven, it's *fireable*: anyone naming a load-bearing origin absent from the manifest voids the disjointness grade. See docs/selection-grade.md §10."
+    },
+    "standing": {
+      "$ref": "#/$defs/Standing",
+      "description": "OPTIONAL (§12) — who has *standing* to contest this attestation, and until when. A signed conclusion that outlives the relation and the party who could contest it is a *monument*: cryptographically valid, semantically empty. This block makes contestability a first-class, offline-checkable property — `contestable_by` MUST name at least one principal other than the issuer (self-contestation is not standing), and `contestable_until` bounds the window after which standing lapses. See docs/standing.md."
+    },
+    "assurance": {
+      "type": "object",
+      "description": "OPTIONAL (§15) — per-field VERIFICATION MODALITY. For each load-bearing field, declares HOW a relier gains assurance about it: `re-derivable` (recompute offline from committed inputs — who-said-it does not matter, the strongest grade), `judgment` (an irreducible call resting on a still-reachable accountable principal; not re-derivable — you can only see later whether it held), `mechanism` (verify-by-construction one layer down — reproducible build / TEE quote / did:web resolution — delegated like an anchor proof), or `asserted` (the issuer's word only, the floor). Lets a relier see, without trusting the issuer, exactly which parts they can check themselves and which rest on trust/accountability. Declared + FIREABLE like §10 origin_manifest: a field graded `re-derivable` that does not re-derive is self-void, and anyone can fire a field they can show is mis-graded — the re-derivable/judgment split is *falsifiable*, never proven decidable from inside. Advisory (never flips accept/reject). Verified by tools/assurance.py; see docs/assurance.md.",
+      "required": ["profile", "fields"],
+      "additionalProperties": false,
+      "properties": {
+        "profile": { "type": "string", "const": "declared/1", "description": "Assurance profile. `declared/1`: issuer-declared, third-party-fireable per-field grades." },
+        "fields": {
+          "type": "array",
+          "description": "One entry per graded field. A load-bearing field with no entry is read as `asserted` (floor).",
+          "items": {
+            "type": "object",
+            "required": ["pointer", "grade"],
+            "additionalProperties": false,
+            "properties": {
+              "pointer": { "type": "string", "description": "RFC 6901 JSON Pointer into THIS envelope naming the graded field (e.g. `/witnessed_claim/content_hash`). A pointer that does not resolve is self-void." },
+              "grade": { "enum": ["re-derivable", "judgment", "mechanism", "asserted"], "description": "The verification modality (see the block description)." },
+              "method": { "type": "string", "description": "`re-derivable` ONLY — how a relier recomputes the value from committed inputs. The reference verifier runs an in-envelope grammar `sha256(/ptr)` / `sha256-utf8(/ptr)` / `equals(/ptr)` offline and self-voids a mismatch; other forms (e.g. `sha256(fetch(artifact_uri))`) are reported `deferred` — re-derivable in principle, the relier runs them." },
+              "principal": { "type": "string", "description": "`judgment` ONLY — the id (a did:* or a platform/colony-sub handle) of the party accountable for the call. Graded named/venue/self like §12 standing: only a keyed/DID principal (`named`) can itself be held to account." },
+              "reachable_until": { "type": "string", "format": "date-time", "description": "`judgment` ONLY — the instant past which the principal is no longer reachable for consequence. A judgment past it reads STALE (accountability lapsed), not INVALID." },
+              "verify": { "type": "string", "description": "`mechanism` ONLY — the verify-by-construction procedure one layer down (e.g. `did:web resolution of glyt.net/.well-known/did.json`, `reproducible build of image@sha256:...`). Delegated, like anchor proofs." },
+              "proposition": { "type": "string", "description": "OPTIONAL — the exact proposition the `method`/`verify` establishes, in plain language (e.g. `note_sha256 is the SHA-256 of this note_text` — NOT `the note is accurate`). The grade binds to THIS proposition, not to the field's value: a witness that proves a narrow fact must not be read as a wider claim (a counter-signature over a nonce proves `key reachable at T`, not `service healthy`). The verifier surfaces it verbatim so a relier/policy attaches assurance to the proposition, not the value; a field whose value outruns its declared proposition is FIREABLE (§15 is falsifiable, not decidable). Recommended wherever the method proves less than the value's plain reading might suggest." }
+            }
+          }
+        }
+      }
+    },
     "extensions": {
       "type": "object",
       "description": "Free-form namespace for forward-compat. Keys MUST be URIs to avoid collision. Consumers MUST ignore unknown extensions but MUST preserve them under round-trip."
@@ -86,12 +122,13 @@
             { "type": "string", "const": "did:web" },
             { "type": "string", "const": "did:voidly" },
             { "type": "string", "const": "platform-handle" },
-            { "type": "string", "const": "ethereum-eoa" }
+            { "type": "string", "const": "ethereum-eoa" },
+            { "type": "string", "const": "colony-sub" }
           ]
         },
         "id": {
           "type": "string",
-          "description": "Identifier under the named scheme. For platform-handle, format is `platform:handle` (e.g. `thecolony.cc:colonist-one`)."
+          "description": "Identifier under the named scheme. For platform-handle, format is `platform:handle` (e.g. `thecolony.ai:colonist-one`)."
         },
         "display_name": {
           "type": "string",
@@ -155,12 +192,47 @@
         "claim_type": { "type": "string", "const": "capability_coverage" },
         "capability_id": {
           "type": "string",
-          "description": "URI identifying the capability whose coverage is being attested. e.g. `https://capabilities.thecolony.cc/post.create`."
+          "description": "URI identifying the capability whose coverage is being attested. e.g. `https://capabilities.thecolony.ai/post.create`."
         },
         "coverage_uri": {
           "type": "string",
           "format": "uri",
           "description": "Pointer to a published coverage descriptor (conformance test report, capability manifest)."
+        }
+      }
+    },
+    "Claim_HumanActionApproval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim_type", "action_digest", "decision", "approval_receipt_uri"],
+      "description": "A human-in-the-loop confirm/approval service (e.g. Glyt) attesting that a specific human operator decided on a specific agent action, at a specific auth strength, within a freshness window. It attests the *decision*, not that the action is wise/safe/legal. The `action_digest` binds THIS action, so the approval is non-transferable to another action.",
+      "properties": {
+        "claim_type": { "type": "string", "const": "human_action_approval" },
+        "action_digest": {
+          "type": "string",
+          "description": "multihash (e.g. `sha256:…`) of the exact action approved — binds this decision to that action; a relier recomputes it and rejects a mismatch."
+        },
+        "decision": { "type": "string", "enum": ["approved", "denied"] },
+        "approval_receipt_uri": {
+          "type": "string",
+          "description": "Where the approval record can be fetched and re-derived independently of the issuer (evidence for the decision)."
+        },
+        "approver_ref": {
+          "type": "string",
+          "description": "OPTIONAL — opaque reference to the approving principal (e.g. a pairwise operator id). MUST NOT be a human identity — it is a stable, non-reversible handle, not a name."
+        },
+        "acr": {
+          "type": "string",
+          "description": "OPTIONAL — achieved authentication strength of the approval, e.g. `mfa` (per OIDC `acr`)."
+        },
+        "amr": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "OPTIONAL — achieved authentication methods, e.g. `[\"pwd\", \"otp\"]` (per OIDC `amr`)."
+        },
+        "approved_at": {
+          "type": "string",
+          "description": "OPTIONAL — RFC 3339 instant the decision was made."
         }
       }
     },
@@ -185,7 +257,7 @@
         },
         "platform_id": {
           "type": "string",
-          "description": "REQUIRED when pointer_type is `platform_receipt` or `transcript_id`. Identifies the platform that issued the receipt (e.g. `thecolony.cc`, `moltbotden.com`)."
+          "description": "REQUIRED when pointer_type is `platform_receipt` or `transcript_id`. Identifies the platform that issued the receipt (e.g. `thecolony.ai`, `moltbotden.com`)."
         }
       },
       "allOf": [
@@ -233,9 +305,9 @@
       "required": ["alg", "key_id", "sig"],
       "properties": {
         "alg": {
-          "description": "Signature algorithm. v0.1 ships ed25519 only — see docs/sigchain.md for why secp256k1 / ecdsa-p256 / BLS12-381 are deferred. New algs are added in dedicated PRs, not in-band per envelope.",
+          "description": "Signature algorithm. `ed25519` (v0.1) or `secp256k1` (v0.1.6 — low-S ECDSA over SHA-256 of the JCS bytes, 64-byte r||s; see docs/sigchain.md). `ecdsa-p256` / `BLS12-381` / PQ remain deferred: new algs land in dedicated PRs against the docs/sigchain.md bar, not in-band per envelope.",
           "type": "string",
-          "const": "ed25519"
+          "enum": ["ed25519", "secp256k1"]
         },
         "key_id": {
           "type": "string",
@@ -253,6 +325,16 @@
             { "type": "string", "const": "countersignatory" },
             { "type": "string", "const": "platform_witness" }
           ]
+        },
+        "evidence_refs": {
+          "description": "OPTIONAL — indices into the top-level `evidence[]` array that THIS signer independently re-derived its signature from. Lets a consumer count effective-independent witnesses over the sigchain instead of trusting len(sigchain): two signers whose evidence_refs resolve to the same `content_hash` are one witness, not two (see docs/independence.md). A signer that omits this, or points only at evidence without a `content_hash`, earns nothing toward independence (undeclared provenance == assume correlated).",
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 }
+        },
+        "selection_grade": {
+          "description": "OPTIONAL — how THIS signer (witness) came to be in the chain, weakest→strongest: `obligor_picked` (the obligor named the witness — steerable, earns nothing toward independence even if its evidence is disjoint, because a pool of disjoint candidates can be shopped), `public_pool_unverified` (drawn from an eligible set the obligor did not define, but the draw is not reproducible), `beacon_drawn` (witness identity = f(public beacon fixed AFTER the row commits, committed eligible-set) — the obligor could neither pre-tune nor re-roll). Independence credit is min(selection_grade, evidence-disjointness): a witness counts only if it is BOTH evidence-disjoint AND steering-bounded. Absent == `obligor_picked` (fail closed). See docs/selection-grade.md.",
+          "type": "string",
+          "enum": ["obligor_picked", "public_pool_unverified", "beacon_drawn"]
         }
       }
     },
@@ -275,6 +357,134 @@
         "coverage_signed_at": {
           "type": "string",
           "format": "date-time"
+        }
+      }
+    },
+    "OriginManifest": {
+      "type": "object",
+      "required": ["origins"],
+      "additionalProperties": false,
+      "properties": {
+        "origins": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "The COMPLETE set of evidence origin content_hashes the verdict was re-derived from. Every `evidence[*].content_hash` MUST appear here; an evidence origin absent from this list means the manifest is incomplete on its face (a self-fire)."
+        },
+        "cosigner": {
+          "type": "object",
+          "required": ["key_id"],
+          "additionalProperties": false,
+          "description": "OPTIONAL — the counterparty with standing to dispute, co-signing the manifest BOUNDARY (not just the favorable members). Co-signing only closes the steering if the co-signer is itself steering-bounded: it carries its own `selection_grade`, so §10 weight = min(co-signer selection_grade, manifest completeness). An obligor_picked co-signer rebuilds the captured quorum one level up.",
+          "properties": {
+            "key_id": { "type": "string" },
+            "selection_grade": {
+              "type": "string",
+              "enum": ["obligor_picked", "public_pool_unverified", "beacon_drawn"]
+            },
+            "sig": { "type": "string", "description": "base64url ed25519 over the canonicalised manifest." }
+          }
+        }
+      }
+    },
+    "Standing": {
+      "type": "object",
+      "required": ["contestable_by", "contest_uri", "contestable_until"],
+      "additionalProperties": false,
+      "properties": {
+        "contestable_by": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/AgentIdentity" },
+          "description": "Principals with standing to contest this attestation. MUST include at least one party OTHER than the issuer — a verifier treats an issuer-only list as no standing, because self-contestation is not standing (standing requires a party the issuer cannot lawyer for)."
+        },
+        "contest_uri": {
+          "type": "string",
+          "description": "URI where a party with standing lodges — and a consumer checks — a contest against this attestation. Distinct from `validity.revocation_uri`: revocation is the ISSUER withdrawing its own claim; contestation is a staked THIRD PARTY disputing it."
+        },
+        "contestable_until": {
+          "type": "string",
+          "description": "RFC 3339 instant after which standing lapses. Being relied upon past this instant with no live contest channel is the *monument* condition. Expiry here is not decay — it is the attestation admitting it was a relation that must be re-held, not a standing fact."
+        },
+        "contest_status_uri": {
+          "type": "string",
+          "description": "OPTIONAL — URI publishing the current contest state (`none` | `open` | `upheld` | `rejected`) for a consumer to fetch in full (online) mode."
+        },
+        "anchor": {
+          "type": "object",
+          "description": "OPTIONAL (§12.3) — externally-anchored standing: upgrades declared contestability to a JOINT READ over two OpenTimestamps->Bitcoin-anchored channels. The `attestation` leg proves the entry's Merkle inclusion in an anchored checkpoint (a LOWER bound: existed no later than a Bitcoin block time, non-backdatable); the `contest` leg proves no contest is anchored up to the latest contest checkpoint (the UPPER bound `standing` actually claims), with staleness bounded by `max_checkpoint_lag_s`. Verified by tools/standing_anchor.py; advisory (never flips accept/reject). Shape folds Touchstone's hash-only inclusion-proof endpoint.",
+          "required": ["profile", "attestation"],
+          "additionalProperties": false,
+          "properties": {
+            "profile": {
+              "const": "touchstone-bitcoin/1",
+              "description": "Anchor scheme. The reference verifier folds `touchstone-bitcoin/1`: domain-separated SHA-256 Merkle inclusion + an OTS->Bitcoin-anchored checkpoint whose OTS digest equals its head_hash."
+            },
+            "attestation": {
+              "type": "object",
+              "description": "Lower-bound channel. Supply an inline `inclusion` proof (offline-verifiable) OR an `inclusion_proof_uri` to fetch it (online).",
+              "required": ["recorder", "entry_seq"],
+              "additionalProperties": false,
+              "properties": {
+                "recorder": { "type": "string", "description": "Recorder id of the append-only log holding the attestation entry." },
+                "entry_seq": { "type": "integer", "minimum": 0, "description": "Sequence number of the attestation entry in that recorder." },
+                "inclusion_proof_uri": { "type": "string", "description": "OPTIONAL — URI serving the inline `inclusion` object. Hash-only: reveals payload_hash + inclusion_proof + checkpoint, never the attestation body." },
+                "inclusion": {
+                  "type": "object",
+                  "description": "OPTIONAL inline inclusion proof — makes the lower bound offline-verifiable.",
+                  "required": ["leaf_hash", "merkle_proof", "checkpoint"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "leaf_hash": { "type": "string", "description": "The Merkle leaf pre-image (the entry_hash — a hash, not the payload)." },
+                    "payload_hash": { "type": "string", "description": "Hash of the attested payload, cross-referencing the attested content." },
+                    "merkle_proof": {
+                      "type": "array",
+                      "description": "Audit path from leaf to checkpoint root; each step names the sibling hash and which side it sits on.",
+                      "items": {
+                        "type": "object",
+                        "required": ["hash", "side"],
+                        "additionalProperties": false,
+                        "properties": { "hash": { "type": "string" }, "side": { "enum": ["left", "right"] } }
+                      }
+                    },
+                    "checkpoint": {
+                      "type": "object",
+                      "description": "The checkpoint whose merkle_root the entry is proven into, plus its Bitcoin anchor.",
+                      "required": ["merkle_root"],
+                      "properties": {
+                        "id": { "type": ["integer", "string"] },
+                        "merkle_root": { "type": "string" },
+                        "head_hash": { "type": "string" },
+                        "bitcoin_anchor": {
+                          "type": "object",
+                          "description": "The checkpoint's OTS->Bitcoin anchor. `ots_digest` MUST equal `head_hash` (else the anchor is for a different digest). Mainnet confirmation is delegated (SPV/verify_anchor).",
+                          "properties": {
+                            "ots_digest": { "type": "string" },
+                            "height": { "type": "integer" },
+                            "block_hash": { "type": "string" },
+                            "block_time": { "type": "integer" },
+                            "status": { "type": "string" },
+                            "corroborated_by": { "type": "array", "items": { "type": "string" } },
+                            "complete_proof_b64": { "type": "string" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "contest": {
+              "type": "object",
+              "description": "Upper-bound channel: the anchored contest recorder against which absence-of-contest is checked. Absence is provable only up to that recorder's latest anchored checkpoint — never to `now`.",
+              "required": ["recorder", "checkpoint_feed_uri"],
+              "additionalProperties": false,
+              "properties": {
+                "recorder": { "type": "string" },
+                "checkpoint_feed_uri": { "type": "string", "description": "URI of the contest recorder's Bitcoin-anchored checkpoint feed." },
+                "max_checkpoint_lag_s": { "type": "integer", "minimum": 0, "description": "Issuer-committed max staleness (seconds). If the latest anchored contest checkpoint is older than this, a verifier reads standing as STALE (not INVALID) — the honest expression of the checkpoint-cadence blind window." }
+              }
+            }
+          }
         }
       }
     }

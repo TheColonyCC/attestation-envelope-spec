@@ -1,0 +1,46 @@
+name: tests
+on:
+  push: {branches: [main]}
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install jsonschema pynacl base58 coincurve pytest
+      - run: pytest tests/ -q
+
+      # §18e — the deductive core, re-checked by a kernel that is not us.
+      # This is the framework's ONLY operator-disjoint witness (docs/self-application.md).
+      # If it ever stops checking, k_floor(F) collapses to 1 on every axis and we must know.
+      - name: machine-check the core reduction (Lean 4)
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y --default-toolchain stable
+          export PATH="$HOME/.elan/bin:$PATH"
+          lean --version
+          lean proofs/Independence.lean
+          echo "Lean kernel accepted the core reduction."
+      - run: python tools/verify.py examples/colony_post_published.v0.1.json --offline
+      - run: python tools/verify.py examples/secp256k1_cosigned.v0.1.json --offline
+      - run: python tools/build_secp256k1_example.py && git diff --exit-code examples/secp256k1_cosigned.v0.1.json
+      - run: python tools/verify.py examples/standing_contestable.v0.1.json --offline
+      - run: python tools/verify.py examples/monument_perpetual.v0.1.json --offline
+      - run: python tools/build_standing_examples.py && git diff --exit-code examples/standing_contestable.v0.1.json examples/monument_perpetual.v0.1.json
+      - run: python tools/verify.py examples/interop_colony_post_e17840cc.v0.1.json --offline   # online round-trip in docs/pilot-interop-v017.md
+      - run: python tools/verify.py examples/issuer_didweb.v0.1.json --offline                  # §13 binding (advisory offline)
+      - run: python tools/verify.py examples/issuer_platform_witness.v0.1.json --offline
+      - run: python tools/build_binding_examples.py && git diff --exit-code examples/issuer_didweb.v0.1.json examples/issuer_platform_witness.v0.1.json examples/artifacts/did-web-thecolony.ai.did.json examples/artifacts/did-web-thecolony.ai-u-colonist-one.did.json
+      - run: python tools/verify.py examples/issuer_didweb_live_glyt.v0.1.json --offline   # binds LIVE online against glyt.net (docs/binding.md); advisory offline
+      - run: python tools/verify.py examples/human_action_approval.v0.1.json --offline
+      - run: python tools/build_approval_example.py && git diff --exit-code examples/human_action_approval.v0.1.json
+      - run: python tools/verify.py examples/independence_multiwitness.v0.1.json --offline
+      - run: python tools/independence.py examples/independence_multiwitness.v0.1.json
+      - run: python tools/independence.py examples/independence_selection.v0.1.json
+      - run: python tools/independence.py examples/independence_origin_manifest.v0.1.json
+      - run: python tools/independence.py examples/independence_quorum.v0.1.json
+      - run: python tools/build_lineage_example.py
+      - run: python tools/verify_lineage.py examples/lineage_twogen.v0.1.json
+      - run: python tools/verify_lineage.py examples/progenly_lineage_embervane.v0.1.json

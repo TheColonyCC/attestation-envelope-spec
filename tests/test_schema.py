@@ -52,14 +52,14 @@ def test_reject_revocation_checked_without_uri():
 
 def test_reject_platform_receipt_without_platform_id():
     bad = _mutate(evidence=[
-        {"pointer_type": "platform_receipt", "uri": "https://thecolony.cc/x"}
+        {"pointer_type": "platform_receipt", "uri": "https://thecolony.ai/x"}
     ])
     assert list(VALIDATOR.iter_errors(bad)), "expected platform_receipt w/o platform_id to fail allOf/if-then"
 
 
 def test_reject_transcript_id_without_platform_id():
     bad = _mutate(evidence=[
-        {"pointer_type": "transcript_id", "uri": "thecolony.cc/dm/transcripts/abc"}
+        {"pointer_type": "transcript_id", "uri": "thecolony.ai/dm/transcripts/abc"}
     ])
     assert list(VALIDATOR.iter_errors(bad)), "expected transcript_id w/o platform_id to fail allOf/if-then"
 
@@ -69,20 +69,36 @@ def test_reject_empty_sigchain():
     assert list(VALIDATOR.iter_errors(bad)), "expected empty sigchain to be rejected (minItems: 1)"
 
 
-def test_reject_secp256k1_alg():
-    """v0.1.1 — alg enum tightened to ed25519 only. secp256k1 deferred to v0.2+.
+def test_accept_secp256k1_alg():
+    """v0.1.6 — secp256k1 re-added to the alg enum (structural).
 
-    See docs/sigchain.md "Why v0.1 ships ed25519 only" for the design note.
+    Structural acceptance only; the cryptographic bar (low-S ECDSA over JCS,
+    64-byte r||s, 65-byte rejection) lives in tests/test_secp256k1.py. See
+    docs/sigchain.md "v0.1.6 — secp256k1 re-added".
     """
-    bad = copy.deepcopy(EXAMPLE)
-    bad["sigchain"] = [{
+    ok = copy.deepcopy(EXAMPLE)
+    ok["sigchain"] = [{
         "alg": "secp256k1",
-        "key_id": "0x" + "0" * 40,
+        "key_id": "did:key:zQ3shWLyu8mc4GLnyzrxvWj9kJPijwGbjdrr3pZ8hacUYxawh",
         "sig": "PLACEHOLDER-secp256k1-signature-base64url",
         "role": "issuer",
     }]
+    assert not list(VALIDATOR.iter_errors(ok)), \
+        "expected alg=secp256k1 to pass v0.1.6 schema structurally"
+
+
+def test_reject_still_deferred_alg():
+    """The alg enum stays closed: ecdsa-p256 / BLS / PQ remain out (surface-area
+    guardrail, docs/sigchain.md). Adding secp256k1 must not open the enum wide."""
+    bad = copy.deepcopy(EXAMPLE)
+    bad["sigchain"] = [{
+        "alg": "ecdsa-p256",
+        "key_id": "did:key:zDnaeExample",
+        "sig": "PLACEHOLDER",
+        "role": "issuer",
+    }]
     assert list(VALIDATOR.iter_errors(bad)), \
-        "expected alg=secp256k1 to be rejected by v0.1.1 schema"
+        "expected alg=ecdsa-p256 to still be rejected"
 
 
 def test_accept_ed25519_alg():
@@ -121,7 +137,7 @@ def test_accept_revocation_checked_with_uri():
         "validity_model": "revocation_checked",
         "not_before": "2026-05-30T12:55:00Z",
         "not_after": "2027-05-30T12:55:00Z",
-        "revocation_uri": "https://thecolony.cc/u/colonist-one/revocations/01910c4f.json",
+        "revocation_uri": "https://thecolony.ai/u/colonist-one/revocations/01910c4f.json",
     })
     jsonschema.validate(ok, SCHEMA, cls=jsonschema.Draft202012Validator)
 
@@ -147,7 +163,7 @@ def test_each_claim_type_branch_is_addressable():
         },
         "capability_coverage": {
             "claim_type": "capability_coverage",
-            "capability_id": "https://capabilities.thecolony.cc/post.create",
+            "capability_id": "https://capabilities.thecolony.ai/post.create",
             "coverage_uri": "https://example.org/coverage.json",
         },
     }
